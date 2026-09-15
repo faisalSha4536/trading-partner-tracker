@@ -1,1 +1,37 @@
 - Prefers not to modify existing route or model files when making additions or changes. Confidence: 0.9
+- Prefers simple frontends built with plain HTML, CSS, and vanilla JavaScript (no frameworks). Confidence: 0.95
+- Prefers client-side API requests to use the current page's origin rather than hardcoding localhost or deployment domains. Confidence: 0.9
+- Prefers minimal, functional frontends without authentication or styling frameworks. Confidence: 0.85
+- Prefers clean, simple, readable UI styling with clear spacing, basic tables, and legible form inputs. Confidence: 0.85
+- Prefers hard deletes over soft deletes; wants dependent records handled with `ON DELETE CASCADE` rather than retained `is_active` flags. Confidence: 0.9
+- Prefers database-level referential integrity with `ON DELETE CASCADE` for dependent records. Confidence: 0.85
+- Prefers to remove now-unused database columns after a feature change makes them obsolete. Confidence: 0.8
+- Expects form submissions that mutate data to re-fetch and re-render the relevant UI immediately after success, and to clear the form fields. Confidence: 0.9
+- Expects basic error handling on API calls (e.g., checking `response.ok` and alerting the user) rather than failing silently. Confidence: 0.9
+- Prefers keeping numeric inputs positive/normalized in the UI and applying sign or business logic in code before sending. Confidence: 0.85
+- Checks async/await flow and expects `await` on fetch and render calls so UI updates are visible immediately. Confidence: 0.85
+- Prefers centralized/shared utility functions for repeated UI refresh logic (e.g., a single `refreshAll()`). Confidence: 0.85
+- Prefers loading/disabled states on buttons while requests are in flight. Confidence: 0.9
+- Prefers visible success or error message/toast feedback after form actions, with inline validation errors before submission. Confidence: 0.9
+- Prefers client-side form validation before submission (required fields, amount > 0, inline error text). Confidence: 0.95
+- Prefers grouping related UI into visually distinct cards/sections. Confidence: 0.85
+- Prefers currency number inputs with `step="0.01"` to allow cents. Confidence: 0.9
+- Prefers event delegation (or freshly re-attaching listeners) for click handlers on dynamically rendered elements. Confidence: 0.9
+- Prefers binding per-item IDs via `data-*` attributes and reading them from `event.target.dataset` rather than relying on closures. Confidence: 0.9
+- When debugging frontend API calls, prefers adding `console.log` before fetches and `.catch()` handlers that log errors to the browser console. Confidence: 0.85
+- Prefers root-cause fixes over workarounds such as `setTimeout` delays. Confidence: 0.9
+- Prefers limiting fixes to the frontend wiring and leaving backend logic unchanged when the bug is in the frontend. Confidence: 0.85
+- When renaming a field or API response key, expects every frontend reference to be updated to prevent breakage. Confidence: 0.9
+- Prefers defensive defaults (e.g., `?? 0`) for potentially undefined numeric API fields before formatting or display. Confidence: 0.85
+- Expects backend endpoints to return numeric zero values, not `undefined`/`null`, for inactive or no-activity entities so the frontend does not need special handling. Confidence: 0.85
+- When debugging data-flow issues, prefers adding step-by-step `console.log` diagnostics on both the frontend and backend to isolate where values diverge. Confidence: 0.85
+- When debugging Express API routing issues, prefers verifying that route mounts (e.g., `app.use('/api/auth', authRoutes)`) are placed before `express.static` and catch-all/404 handlers. Confidence: 0.8
+- Prefers explicit type normalization (e.g., `String()`, `Number()`, `.toLowerCase()`) when comparing or computing with values returned from external APIs/databases to avoid type/case mismatches. Confidence: 0.85
+- When troubleshooting aggregation bugs, expects to inspect raw source data before processing and the final computed result before returning, with per-iteration logging inside loops. Confidence: 0.8
+- When filtering database records by date, prefers comparing only the date component and ignoring the time/timestamp portion to avoid same-day mismatches. Confidence: 0.85
+- When debugging frontend data issues, prefers verifying the raw database values directly (e.g., in Supabase) to confirm the source of truth before fixing frontend or backend code. Confidence: 0.85
+- Expects frontend styling to be mobile responsive by default, working well down to ~360px wide. Confidence: 0.9
+- Prefers touch-friendly UI targets with a minimum height of ~44px for buttons and inputs. Confidence: 0.9
+- Prefers a base font size of at least 16px to prevent iOS auto-zoom on input focus. Confidence: 0.85
+- When asked for styling or layout changes, expects JavaScript logic to remain untouched and only CSS/HTML to be modified. Confidence: 0.95
+- When explicitly instructed not to modify the backend, expects only frontend changes and verification that server-side access controls remain intact. Confidence: 0.85

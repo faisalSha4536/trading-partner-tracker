@@ -1,0 +1,16 @@
+- Wants role-based access control (RBAC) with distinct admin and partner roles. Confidence: 0.95
+- Wants self-signup to create admin accounts; partner accounts should be created by admins. Confidence: 0.95
+- Prefers a server-side admin/service-role Supabase client for privileged operations and never exposing it to the frontend. Confidence: 0.95
+- Prefers Express middleware for authentication (`requireAuth`) and authorization (`requireAdmin`). Confidence: 0.95
+- Wants JWT token verification via `Authorization: Bearer <token>` header. Confidence: 0.9
+- Prefers route-level protection by applying middleware to specific endpoints rather than global auth. Confidence: 0.9
+- Prefers storing sensitive credentials in environment variables. Confidence: 0.95
+- Wants `.env.example` updated when new environment variables are introduced. Confidence: 0.85
+- Prefers backend-only changes when explicitly instructed not to touch the frontend. Confidence: 0.95
+- Wants auth-related endpoints grouped under a dedicated `/api/auth` route. Confidence: 0.85
+- Wants user roles stored in a separate table (`user_roles`) linked by user ID. Confidence: 0.9
+- Wants partner records linked to auth users via a `user_id` column. Confidence: 0.9
+- Considers client-side authentication checks (redirects, UI hiding) as UX safeguards only; treats backend middleware as the real security boundary. Confidence: 0.95
+- Prefers to store the access token and user role in browser localStorage for frontend auth state. Confidence: 0.9
+- Wants role-based UI visibility: non-admin users should not see admin-only controls/forms even though the backend already enforces access. Confidence: 0.9
+- Prefers role-based UI controls to be omitted from the rendered HTML entirely for non-authorized roles, not merely hidden via CSS. Confidence: 0.9

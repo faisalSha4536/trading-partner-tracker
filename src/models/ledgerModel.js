@@ -25,11 +25,14 @@ async function getLedgerEntriesBeforeDate(date) {
   const { data, error } = await supabase
     .from('ledger')
     .select('*')
-    .lt('entry_date', date)
     .order('entry_date', { ascending: true });
 
   if (error) throw error;
-  return data;
+
+  return data.filter((entry) => {
+    const entryDate = new Date(entry.entry_date).toISOString().split('T')[0];
+    return entryDate <= date;
+  });
 }
 
 module.exports = {

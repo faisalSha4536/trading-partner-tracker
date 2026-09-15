@@ -5,22 +5,34 @@ async function calculateBalances(asOfDate) {
   const partners = await getAllPartners();
   const ledgerEntries = await getLedgerEntriesBeforeDate(asOfDate);
 
-  const partnerIds = partners.map((partner) => partner.id);
+  console.log('[calculateBalances] Raw ledger entries:', JSON.stringify(ledgerEntries, null, 2));
+
+  const partnerIds = partners.map((partner) => String(partner.id));
   const balances = Object.fromEntries(partnerIds.map((id) => [id, 0]));
-  const names = Object.fromEntries(partners.map((partner) => [partner.id, partner.name]));
+  const totalDeposited = Object.fromEntries(partnerIds.map((id) => [id, 0]));
+  const names = Object.fromEntries(partners.map((partner) => [String(partner.id), partner.name]));
 
   for (const entry of ledgerEntries) {
-    const { entry_type, amount, partner_id } = entry;
+    const entryType = String(entry.entry_type ?? '').toLowerCase();
+    const amount = Number(entry.amount ?? 0);
+    const partnerId = String(entry.partner_id ?? '');
 
-    if (entry_type === 'deposit' || entry_type === 'withdrawal') {
-      if (!partnerIds.includes(partner_id)) continue;
+    console.log('[calculateBalances] Processing entry:', { entryType, amount, partnerId, partnerIds });
 
-      if (entry_type === 'deposit') {
-        balances[partner_id] += amount;
-      } else {
-        balances[partner_id] -= amount;
+    if (entryType === 'deposit' || entryType === 'withdrawal') {
+      if (!partnerIds.includes(partnerId)) {
+        console.log('[calculateBalances] Skipping entry: partner_id not in partner list');
+        continue;
       }
-    } else if (entry_type === 'pnl') {
+
+      if (entryType === 'deposit') {
+        balances[partnerId] += amount;
+        totalDeposited[partnerId] += amount;
+      } else {
+        balances[partnerId] -= amount;
+        totalDeposited[partnerId] -= amount;
+      }
+    } else if (entryType === 'pnl') {
       const totalBalance = partnerIds.reduce((sum, id) => sum + balances[id], 0);
 
       if (totalBalance === 0) {
@@ -37,17 +49,21 @@ async function calculateBalances(asOfDate) {
 
   const totalBalance = partnerIds.reduce((sum, id) => sum + balances[id], 0);
 
-  return partnerIds.map((id) => {
-    const balance = balances[id];
-    const ratio = totalBalance === 0 ? 0 : Number((balance / totalBalance).toFixed(4));
+  const result = partnerIds.map((id) => {
+    const currentBalance = balances[id];
+    const ratio = totalBalance === 0 ? 0 : Number((currentBalance / totalBalance).toFixed(4));
 
     return {
       partner_id: id,
       name: names[id],
-      balance,
+      total_deposited: totalDeposited[id],
+      current_balance: currentBalance,
       ratio,
     };
   });
+
+  console.log('[calculateBalances] Final result:', JSON.stringify(result, null, 2));
+  return result;
 }
 
 module.exports = {

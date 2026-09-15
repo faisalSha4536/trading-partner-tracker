@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trading Partners - Login</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Trading Partners</h1>
+
+    <div class="tabs">
+      <button id="tab-login" class="tab-button active">Login</button>
+      <button id="tab-signup" class="tab-button">Sign Up</button>
+    </div>
+
+    <section class="card">
+      <h2 id="form-title">Login</h2>
+
+      <form id="auth-form">
+        <label for="email">Email</label>
+        <input type="email" id="email" required>
+
+        <label for="password">Password</label>
+        <input type="password" id="password" required>
+
+        <div id="auth-error" class="inline-error"></div>
+
+        <button type="submit" id="auth-submit">Login</button>
+      </form>
+    </section>
+  </div>
+
+  <script>
+    const tabLogin = document.getElementById('tab-login');
+    const tabSignup = document.getElementById('tab-signup');
+    const formTitle = document.getElementById('form-title');
+    const authForm = document.getElementById('auth-form');
+    const authError = document.getElementById('auth-error');
+    const submitButton = document.getElementById('auth-submit');
+
+    let mode = 'login';
+
+    function setMode(newMode) {
+      mode = newMode;
+      if (mode === 'login') {
+        tabLogin.classList.add('active');
+        tabSignup.classList.remove('active');
+        formTitle.textContent = 'Login';
+        submitButton.textContent = 'Login';
+      } else {
+        tabLogin.classList.remove('active');
+        tabSignup.classList.add('active');
+        formTitle.textContent = 'Sign Up';
+        submitButton.textContent = 'Sign Up';
+      }
+      authError.textContent = '';
+      authError.style.display = 'none';
+    }
+
+    tabLogin.addEventListener('click', () => setMode('login'));
+    tabSignup.addEventListener('click', () => setMode('signup'));
+
+    authForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      authError.style.display = 'none';
+      authError.textContent = '';
+
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const url = mode === 'login' ? '/api/auth/login' : '/api/auth/signup';
+
+      console.log('[Auth] Fetching URL:', url);
+
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Authentication failed');
+        }
+
+        const accessToken = data.session?.access_token;
+        const role = data.role;
+
+        if (!accessToken) {
+          throw new Error('No access token received');
+        }
+
+        localStorage.setItem('access_token', accessToken);
+        localStorage.setItem('user_role', role || 'admin');
+        window.location.href = '/index.html';
+      } catch (error) {
+        authError.textContent = error.message;
+        authError.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>

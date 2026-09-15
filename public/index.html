@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trading Partners</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Trading Partners</h1>
+      <button id="logout-button">Logout</button>
+    </div>
+
+    <div id="message-area"></div>
+
+    <section class="card">
+      <h2>Balances</h2>
+      <div class="table-container">
+        <table id="balance-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Deposited</th>
+              <th>Current Balance</th>
+              <th>Ratio</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card admin-only">
+      <h2>Add Partner</h2>
+      <form id="partner-form">
+        <label for="partner-name">Name</label>
+        <input type="text" id="partner-name" required>
+
+        <label for="partner-email">Email</label>
+        <input type="email" id="partner-email" required>
+
+        <label for="partner-password">Password</label>
+        <input type="password" id="partner-password" required>
+
+        <label for="partner-deposit-amount">Initial Deposit Amount (optional)</label>
+        <input type="number" id="partner-deposit-amount" step="0.01" min="0">
+
+        <label for="partner-deposit-date">Date</label>
+        <input type="date" id="partner-deposit-date">
+
+        <div id="partner-form-error" class="inline-error"></div>
+
+        <button type="submit" id="partner-submit">Add Partner</button>
+      </form>
+    </section>
+
+    <section class="card admin-only">
+      <h2>Log Deposit/Withdrawal</h2>
+      <form id="transaction-form">
+        <label for="transaction-partner">Partner</label>
+        <select id="transaction-partner" required></select>
+
+        <label for="transaction-type">Type</label>
+        <select id="transaction-type" required>
+          <option value="deposit">Deposit</option>
+          <option value="withdrawal">Withdrawal</option>
+        </select>
+
+        <label for="transaction-amount">Amount</label>
+        <input type="number" id="transaction-amount" step="0.01" min="0" required>
+
+        <label for="transaction-date">Date</label>
+        <input type="date" id="transaction-date" required>
+
+        <div id="transaction-form-error" class="inline-error"></div>
+
+        <button type="submit" id="transaction-submit">Submit</button>
+      </form>
+    </section>
+
+    <section class="card admin-only">
+      <h2>Log Daily P&L</h2>
+      <form id="pnl-form">
+        <label for="pnl-type">Type</label>
+        <select id="pnl-type" required>
+          <option value="profit">Profit</option>
+          <option value="loss">Loss</option>
+        </select>
+
+        <label for="pnl-amount">Amount</label>
+        <input type="number" id="pnl-amount" step="0.01" min="0" required>
+
+        <label for="pnl-date">Date</label>
+        <input type="date" id="pnl-date" required>
+
+        <div id="pnl-form-error" class="inline-error"></div>
+
+        <button type="submit" id="pnl-submit">Submit P&L</button>
+      </form>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,9 +1,10 @@
 const express = require('express');
 const { addLedgerEntry } = require('../models/ledgerModel');
+const { requireAuth, requireAdmin } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-router.post('/deposit', async (req, res) => {
+router.post('/deposit', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { partner_id, amount, entry_date } = req.body;
     const entry = await addLedgerEntry({
@@ -18,7 +19,7 @@ router.post('/deposit', async (req, res) => {
   }
 });
 
-router.post('/withdrawal', async (req, res) => {
+router.post('/withdrawal', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { partner_id, amount, entry_date } = req.body;
     const entry = await addLedgerEntry({
@@ -33,7 +34,7 @@ router.post('/withdrawal', async (req, res) => {
   }
 });
 
-router.post('/pnl', async (req, res) => {
+router.post('/pnl', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { amount, entry_date } = req.body;
     const entry = await addLedgerEntry({
