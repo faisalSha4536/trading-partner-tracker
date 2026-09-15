@@ -14,3 +14,11 @@
 - Prefers to store the access token and user role in browser localStorage for frontend auth state. Confidence: 0.9
 - Wants role-based UI visibility: non-admin users should not see admin-only controls/forms even though the backend already enforces access. Confidence: 0.9
 - Prefers role-based UI controls to be omitted from the rendered HTML entirely for non-authorized roles, not merely hidden via CSS. Confidence: 0.9
+- Wants to prevent self-removal/self-deletion actions for the currently logged-in admin (e.g., hide the Remove button on the admin's own partner row). Confidence: 0.9
+- Wants signup to automatically create a corresponding partner record for the new user. Confidence: 0.95
+- Wants expired/invalid auth tokens (401 responses) handled gracefully by clearing auth state from localStorage and redirecting to the login page. Confidence: 0.95
+- Prefers a centralized/shared API response handler for frontend fetch calls to manage auth failures consistently. Confidence: 0.9
+- Wants all auth-related client-side state (access token, role, user id) cleared together on logout or token expiration. Confidence: 0.9
+- When debugging backend auth flows, wants both the returned `data` and `error` from Supabase operations logged separately and explicitly, not just a generic catch-block message. Confidence: 0.9
+- Wants backend auth errors surfaced in the API response rather than swallowed, so signup/insert failures are visible. Confidence: 0.9
+- Prefers defensive fallback values for required database fields during auth signup (e.g., name → email local-part → default label) to avoid NOT NULL constraint failures. Confidence: 0.85

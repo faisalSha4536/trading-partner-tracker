@@ -10,10 +10,27 @@ function getAuthHeaders() {
   return { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') };
 }
 
+async function handleApiResponse(response) {
+  if (response.status === 401) {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user_role');
+    localStorage.removeItem('user_id');
+    window.location.href = '/login.html';
+    throw new Error('Session expired');
+  }
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `Request failed: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
 async function fetchBalances() {
   console.log('[fetchBalances] Requesting /api/balances');
   const response = await fetch('/api/balances', { headers: getAuthHeaders() });
-  const balances = await response.json();
+  const balances = await handleApiResponse(response);
   console.log('[fetchBalances] Received:', balances);
   renderBalances(balances);
 }
@@ -23,11 +40,13 @@ function renderBalances(balances) {
   const tbody = document.querySelector('#balance-table tbody');
   tbody.innerHTML = '';
 
-  balances.forEach(({ partner_id, name, total_deposited, current_balance, ratio }) => {
+  balances.forEach(({ partner_id, user_id, name, total_deposited, current_balance, ratio }) => {
     const depositedValue = Number(total_deposited ?? 0);
     const balanceValue = Number(current_balance ?? 0);
     const ratioValue = Number(ratio ?? 0);
-    const removeCell = userRole === 'admin'
+    const loggedInUserId = localStorage.getItem('user_id');
+    const isOwnRow = String(user_id || '') === String(loggedInUserId || '');
+    const removeCell = userRole === 'admin' && !isOwnRow
       ? `<td><button class="remove-partner" data-partner-id="${partner_id}">Remove</button></td>`
       : '<td></td>';
 
@@ -45,7 +64,7 @@ function renderBalances(balances) {
 
 async function fetchPartners() {
   const response = await fetch('/api/partners', { headers: getAuthHeaders() });
-  const partners = await response.json();
+  const partners = await handleApiResponse(response);
   const select = document.getElementById('transaction-partner');
   select.innerHTML = '';
 
@@ -118,6 +137,7 @@ function applyRoleBasedVisibility() {
 document.getElementById('logout-button').addEventListener('click', () => {
   localStorage.removeItem('access_token');
   localStorage.removeItem('user_role');
+  localStorage.removeItem('user_id');
   window.location.href = '/login.html';
 });
 
@@ -155,9 +175,7 @@ document.getElementById('pnl-form').addEventListener('submit', async (event) => 
       body: JSON.stringify({ amount, entry_date }),
     });
 
-    if (!response.ok) {
-      throw new Error(`P&L submit failed: ${response.statusText}`);
-    }
+    await handleApiResponse(response);
 
     event.target.reset();
     setToday('pnl-date');
@@ -207,9 +225,7 @@ document.getElementById('transaction-form').addEventListener('submit', async (ev
       body: JSON.stringify({ partner_id, amount, entry_date }),
     });
 
-    if (!response.ok) {
-      throw new Error(`Transaction failed: ${response.statusText}`);
-    }
+    await handleApiResponse(response);
 
     event.target.reset();
     setToday('transaction-date');
@@ -265,11 +281,7 @@ document.getElementById('partner-form').addEventListener('submit', async (event)
       body: JSON.stringify({ name, email, password }),
     });
 
-    if (!partnerResponse.ok) {
-      throw new Error(`Partner creation failed: ${partnerResponse.statusText}`);
-    }
-
-    const partner = await partnerResponse.json();
+    const partner = await handleApiResponse(partnerResponse);
     console.log('[Add Partner] Created partner with id:', partner.id);
 
     if (depositAmount > 0) {
@@ -280,12 +292,7 @@ document.getElementById('partner-form').addEventListener('submit', async (event)
         body: JSON.stringify({ partner_id: partner.id, amount: depositAmount, entry_date }),
       });
 
-      if (!depositResponse.ok) {
-        throw new Error(`Initial deposit failed: ${depositResponse.statusText}`);
-      }
-
-      const depositResult = await depositResponse.json();
-      console.log('[Add Partner] Initial deposit saved:', depositResult);
+      await handleApiResponse(depositResponse);
     }
 
     console.log('[Add Partner] Refreshing balances and dropdown');
@@ -309,16 +316,13 @@ document.querySelector('#balance-table tbody').addEventListener('click', async (
   const partnerId = button.dataset.partnerId;
   console.log('Removing partner:', partnerId);
 
-  fetch(`/api/partners/${partnerId}`, { method: 'DELETE', headers: getAuthHeaders() })
-    .then(async (response) => {
-      if (!response.ok) {
-        throw new Error(`Remove failed: ${response.statusText}`);
-      }
-      await refreshAll();
-    })
-    .catch((error) => {
-      console.error('Remove partner error:', error);
-    });
+  try {
+    const response = await fetch(`/api/partners/${partnerId}`, { method: 'DELETE', headers: getAuthHeaders() });
+    await handleApiResponse(response);
+    await refreshAll();
+  } catch (error) {
+    console.error('Remove partner error:', error);
+  }
 });
 
 applyRoleBasedVisibility();

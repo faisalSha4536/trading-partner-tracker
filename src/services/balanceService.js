@@ -11,6 +11,7 @@ async function calculateBalances(asOfDate) {
   const balances = Object.fromEntries(partnerIds.map((id) => [id, 0]));
   const totalDeposited = Object.fromEntries(partnerIds.map((id) => [id, 0]));
   const names = Object.fromEntries(partners.map((partner) => [String(partner.id), partner.name]));
+  const userIds = Object.fromEntries(partners.map((partner) => [String(partner.id), partner.user_id]));
 
   for (const entry of ledgerEntries) {
     const entryType = String(entry.entry_type ?? '').toLowerCase();
@@ -55,6 +56,7 @@ async function calculateBalances(asOfDate) {
 
     return {
       partner_id: id,
+      user_id: userIds[id],
       name: names[id],
       total_deposited: totalDeposited[id],
       current_balance: currentBalance,

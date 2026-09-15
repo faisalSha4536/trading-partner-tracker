@@ -35,3 +35,6 @@
 - Prefers a base font size of at least 16px to prevent iOS auto-zoom on input focus. Confidence: 0.85
 - When asked for styling or layout changes, expects JavaScript logic to remain untouched and only CSS/HTML to be modified. Confidence: 0.95
 - When explicitly instructed not to modify the backend, expects only frontend changes and verification that server-side access controls remain intact. Confidence: 0.85
+- Prefers to derive a default display name from the email local-part when an explicit name is not provided. Confidence: 0.9
+- Wants POST/creation endpoints to return the newly created related entity alongside the primary response. Confidence: 0.85
+- Prefers to revert or remove code paths that become obsolete after a feature change, not just leave them in place. Confidence: 0.9
