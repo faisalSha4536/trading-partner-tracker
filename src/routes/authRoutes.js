@@ -28,7 +28,7 @@ router.post('/signup', async (req, res) => {
 
       const { data: partner, error: partnerError } = await supabase
         .from('partners')
-        .insert({ name: partnerName, user_id: user.id })
+        .insert({ name: partnerName, user_id: user.id, owner_id: user.id })
         .select()
         .single();
 

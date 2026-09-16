@@ -12,6 +12,7 @@ router.post('/deposit', requireAuth, requireAdmin, async (req, res) => {
       amount,
       partner_id,
       entry_date,
+      owner_id: req.user.id,
     });
     res.json(entry);
   } catch (error) {
@@ -27,6 +28,7 @@ router.post('/withdrawal', requireAuth, requireAdmin, async (req, res) => {
       amount,
       partner_id,
       entry_date,
+      owner_id: req.user.id,
     });
     res.json(entry);
   } catch (error) {
@@ -42,6 +44,7 @@ router.post('/pnl', requireAuth, requireAdmin, async (req, res) => {
       amount,
       partner_id: null,
       entry_date,
+      owner_id: req.user.id,
     });
     res.json(entry);
   } catch (error) {

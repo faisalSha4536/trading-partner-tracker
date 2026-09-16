@@ -1,19 +1,25 @@
 const { supabase } = require('../config/supabaseClient');
 
-async function getAllLedgerEntries() {
-  const { data, error } = await supabase
+async function getAllLedgerEntries(ownerId) {
+  let query = supabase
     .from('ledger')
     .select('*')
     .order('entry_date', { ascending: true });
+
+  if (ownerId) {
+    query = query.eq('owner_id', ownerId);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
   return data;
 }
 
-async function addLedgerEntry({ entry_type, amount, partner_id, entry_date }) {
+async function addLedgerEntry({ entry_type, amount, partner_id, entry_date, owner_id }) {
   const { data, error } = await supabase
     .from('ledger')
-    .insert({ entry_type, amount, partner_id, entry_date })
+    .insert({ entry_type, amount, partner_id, entry_date, owner_id })
     .select()
     .single();
 
@@ -21,11 +27,17 @@ async function addLedgerEntry({ entry_type, amount, partner_id, entry_date }) {
   return data;
 }
 
-async function getLedgerEntriesBeforeDate(date) {
-  const { data, error } = await supabase
+async function getLedgerEntriesBeforeDate(date, ownerId) {
+  let query = supabase
     .from('ledger')
     .select('*')
     .order('entry_date', { ascending: true });
+
+  if (ownerId) {
+    query = query.eq('owner_id', ownerId);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
 

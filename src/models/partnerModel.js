@@ -1,16 +1,22 @@
 const { supabase } = require('../config/supabaseClient');
 const { supabaseAdmin } = require('../config/supabaseAdminClient');
 
-async function getAllPartners() {
-  const { data, error } = await supabase
+async function getAllPartners(ownerId) {
+  let query = supabase
     .from('partners')
     .select('*');
+
+  if (ownerId) {
+    query = query.eq('owner_id', ownerId);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
   return data;
 }
 
-async function createPartner(name, email, password) {
+async function createPartner(name, email, password, ownerId) {
   const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email,
     password,
@@ -29,7 +35,7 @@ async function createPartner(name, email, password) {
 
   const { data, error } = await supabase
     .from('partners')
-    .insert({ name, user_id: userId })
+    .insert({ name, user_id: userId, owner_id: ownerId })
     .select()
     .single();
 
@@ -42,7 +48,18 @@ async function getPartnerById(id) {
     .from('partners')
     .select('*')
     .eq('id', id)
-    .single();
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+async function getPartnerByUserId(userId) {
+  const { data, error } = await supabase
+    .from('partners')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle();
 
   if (error) throw error;
   return data;
@@ -62,5 +79,6 @@ module.exports = {
   getAllPartners,
   createPartner,
   getPartnerById,
+  getPartnerByUserId,
   deletePartner,
 };

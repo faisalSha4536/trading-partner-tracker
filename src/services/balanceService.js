@@ -1,9 +1,9 @@
 const { getAllPartners } = require('../models/partnerModel');
 const { getLedgerEntriesBeforeDate } = require('../models/ledgerModel');
 
-async function calculateBalances(asOfDate) {
-  const partners = await getAllPartners();
-  const ledgerEntries = await getLedgerEntriesBeforeDate(asOfDate);
+async function calculateBalances(asOfDate, owner_id) {
+  const partners = await getAllPartners(owner_id);
+  const ledgerEntries = await getLedgerEntriesBeforeDate(asOfDate, owner_id);
 
   console.log('[calculateBalances] Raw ledger entries:', JSON.stringify(ledgerEntries, null, 2));
 

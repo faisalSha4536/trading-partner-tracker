@@ -1,12 +1,27 @@
 const express = require('express');
-const { getAllPartners, createPartner, deletePartner } = require('../models/partnerModel');
+const {
+  getAllPartners,
+  createPartner,
+  getPartnerById,
+  getPartnerByUserId,
+  deletePartner,
+} = require('../models/partnerModel');
 const { requireAuth, requireAdmin } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const partners = await getAllPartners();
+    let ownerId;
+    if (req.userRole === 'admin') {
+      ownerId = req.user.id;
+    } else {
+      // partner: look up their own partners row to find which admin owns them
+      const myPartnerRow = await getPartnerByUserId(req.user.id);
+      if (!myPartnerRow) return res.status(403).json({ error: "No partner record linked to this account" });
+      ownerId = myPartnerRow.owner_id;
+    }
+    const partners = await getAllPartners(ownerId);
     res.json(partners);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -16,7 +31,7 @@ router.get('/', requireAuth, async (req, res) => {
 router.post('/', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { name, email, password } = req.body;
-    const partner = await createPartner(name, email, password);
+    const partner = await createPartner(name, email, password, req.user.id);
     res.json(partner);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -25,6 +40,10 @@ router.post('/', requireAuth, requireAdmin, async (req, res) => {
 
 router.delete('/:id', requireAuth, requireAdmin, async (req, res) => {
   try {
+    const partner = await getPartnerById(req.params.id);
+    if (!partner || partner.owner_id !== req.user.id) {
+      return res.status(403).json({ error: "Not authorized to delete this partner" });
+    }
     await deletePartner(req.params.id);
     res.json({ success: true });
   } catch (error) {
