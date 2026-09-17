@@ -10,27 +10,60 @@ function getAuthHeaders() {
   return { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') };
 }
 
-async function handleApiResponse(response) {
-  if (response.status === 401) {
+async function handleApiResponse(response, retryFn) {
+  if (response.status !== 401) {
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Request failed: ${response.statusText}`);
+    }
+    return response;
+  }
+
+  const refreshToken = localStorage.getItem('refresh_token');
+  if (!refreshToken) {
     localStorage.removeItem('access_token');
     localStorage.removeItem('user_role');
     localStorage.removeItem('user_id');
+    localStorage.removeItem('refresh_token');
     window.location.href = '/login.html';
     throw new Error('Session expired');
   }
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `Request failed: ${response.statusText}`);
+  try {
+    const refreshResponse = await fetch('/api/auth/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+
+    if (refreshResponse.status === 200) {
+      const sessionData = await refreshResponse.json();
+      if (sessionData && sessionData.access_token && sessionData.refresh_token) {
+        localStorage.setItem('access_token', sessionData.access_token);
+        localStorage.setItem('refresh_token', sessionData.refresh_token);
+        if (typeof retryFn === 'function') {
+          return await retryFn();
+        }
+      }
+    }
+  } catch (error) {
+    // Fall through to redirect
   }
 
-  return response.json();
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('user_role');
+  localStorage.removeItem('user_id');
+  localStorage.removeItem('refresh_token');
+  window.location.href = '/login.html';
+  throw new Error('Session expired');
 }
 
 async function fetchBalances() {
   console.log('[fetchBalances] Requesting /api/balances');
-  const response = await fetch('/api/balances', { headers: getAuthHeaders() });
-  const balances = await handleApiResponse(response);
+  const doFetch = () => fetch('/api/balances', { headers: getAuthHeaders() });
+  let response = await doFetch();
+  response = await handleApiResponse(response, doFetch);
+  const balances = await response.json();
   console.log('[fetchBalances] Received:', balances);
   renderBalances(balances);
 }
@@ -63,8 +96,10 @@ function renderBalances(balances) {
 }
 
 async function fetchPartners() {
-  const response = await fetch('/api/partners', { headers: getAuthHeaders() });
-  const partners = await handleApiResponse(response);
+  const doFetch = () => fetch('/api/partners', { headers: getAuthHeaders() });
+  let response = await doFetch();
+  response = await handleApiResponse(response, doFetch);
+  const partners = await response.json();
   const select = document.getElementById('transaction-partner');
   select.innerHTML = '';
 
@@ -169,13 +204,15 @@ document.getElementById('pnl-form').addEventListener('submit', async (event) => 
   setLoading(submitButton);
 
   try {
-    const response = await fetch('/api/ledger/pnl', {
+    const doFetch = () => fetch('/api/ledger/pnl', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({ amount, entry_date }),
     });
 
-    await handleApiResponse(response);
+    let response = await doFetch();
+    response = await handleApiResponse(response, doFetch);
+    await response.json();
 
     event.target.reset();
     setToday('pnl-date');
@@ -219,13 +256,15 @@ document.getElementById('transaction-form').addEventListener('submit', async (ev
   setLoading(submitButton);
 
   try {
-    const response = await fetch(`/api/ledger/${type}`, {
+    const doFetch = () => fetch(`/api/ledger/${type}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({ partner_id, amount, entry_date }),
     });
 
-    await handleApiResponse(response);
+    let response = await doFetch();
+    response = await handleApiResponse(response, doFetch);
+    await response.json();
 
     event.target.reset();
     setToday('transaction-date');
@@ -275,24 +314,28 @@ document.getElementById('partner-form').addEventListener('submit', async (event)
 
   try {
     console.log('[Add Partner] Creating partner:', name);
-    const partnerResponse = await fetch('/api/partners', {
+    const doFetch = () => fetch('/api/partners', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({ name, email, password }),
     });
 
-    const partner = await handleApiResponse(partnerResponse);
+    let response = await doFetch();
+    response = await handleApiResponse(response, doFetch);
+    const partner = await response.json();
     console.log('[Add Partner] Created partner with id:', partner.id);
 
     if (depositAmount > 0) {
       console.log('[Add Partner] Posting initial deposit:', { partner_id: partner.id, amount: depositAmount, entry_date });
-      const depositResponse = await fetch('/api/ledger/deposit', {
+      const doFetchDeposit = () => fetch('/api/ledger/deposit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({ partner_id: partner.id, amount: depositAmount, entry_date }),
       });
 
-      await handleApiResponse(depositResponse);
+      let depositResponse = await doFetchDeposit();
+      depositResponse = await handleApiResponse(depositResponse, doFetchDeposit);
+      await depositResponse.json();
     }
 
     console.log('[Add Partner] Refreshing balances and dropdown');
@@ -317,8 +360,10 @@ document.querySelector('#balance-table tbody').addEventListener('click', async (
   console.log('Removing partner:', partnerId);
 
   try {
-    const response = await fetch(`/api/partners/${partnerId}`, { method: 'DELETE', headers: getAuthHeaders() });
-    await handleApiResponse(response);
+    const doFetch = () => fetch(`/api/partners/${partnerId}`, { method: 'DELETE', headers: getAuthHeaders() });
+    let response = await doFetch();
+    response = await handleApiResponse(response, doFetch);
+    await response.json();
     await refreshAll();
   } catch (error) {
     console.error('Remove partner error:', error);
@@ -330,3 +375,11 @@ setToday('pnl-date');
 setToday('transaction-date');
 setToday('partner-deposit-date');
 refreshAll();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then(() => console.log('Service worker registered'))
+      .catch((err) => console.error('Service worker registration failed:', err));
+  });
+}

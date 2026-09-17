@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Trading Partners - Login</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#000000">
 </head>
 <body>
   <div class="container">
@@ -109,6 +111,7 @@
         }
 
         localStorage.setItem('access_token', accessToken);
+        localStorage.setItem('refresh_token', data.session?.refresh_token);
         localStorage.setItem('user_role', role || 'admin');
         localStorage.setItem('user_id', userId || '');
         window.location.href = '/index.html';

@@ -81,4 +81,27 @@ router.post('/logout', async (req, res) => {
   }
 });
 
+router.post('/refresh', async (req, res) => {
+  try {
+    const { refresh_token } = req.body;
+    if (!refresh_token) {
+      return res.status(401).json({ error: 'Refresh token is required' });
+    }
+
+    const { data, error } = await supabase.auth.refreshSession({ refresh_token });
+
+    if (error) {
+      return res.status(401).json({ error: error.message });
+    }
+
+    if (!data || !data.session) {
+      return res.status(401).json({ error: 'Failed to refresh session' });
+    }
+
+    res.json(data.session);
+  } catch (error) {
+    res.status(401).json({ error: error.message });
+  }
+});
+
 module.exports = router;
