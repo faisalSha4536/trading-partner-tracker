@@ -104,4 +104,42 @@ router.post('/refresh', async (req, res) => {
   }
 });
 
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: process.env.APP_URL + '/reset-password.html',
+    });
+    if (error) throw error;
+    res.json({ success: true, message: "If that email exists, a reset link has been sent." });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { access_token, new_password } = req.body;
+    if (!access_token || !new_password) {
+      return res.status(400).json({ error: "Access token and new password are required" });
+    }
+
+    const { data: userData, error: userError } = await supabase.auth.getUser(access_token);
+    if (userError || !userData.user) {
+      return res.status(401).json({ error: "Invalid or expired reset link" });
+    }
+
+    const { supabaseAdmin } = require('../config/supabaseAdminClient');
+    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+      userData.user.id,
+      { password: new_password }
+    );
+
+    if (updateError) throw updateError;
+    res.json({ success: true, message: "Password updated successfully" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;

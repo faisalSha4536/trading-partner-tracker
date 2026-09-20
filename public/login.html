@@ -32,10 +32,28 @@
         <label for="password">Password</label>
         <input type="password" id="password" required>
 
+        <div id="forgot-container" style="margin-top: 0.5rem; margin-bottom: 1rem;">
+          <a href="#" id="forgot-link" style="font-size: 0.875rem; color: #2563eb; text-decoration: none;">Forgot Password?</a>
+        </div>
+
         <div id="auth-error" class="inline-error"></div>
 
         <button type="submit" id="auth-submit">Login</button>
       </form>
+
+      <div id="forgot-password-section" style="display: none;">
+        <form id="forgot-form">
+          <label for="forgot-email">Email</label>
+          <input type="email" id="forgot-email" required>
+
+          <div id="forgot-message" style="margin-top: 0.5rem; margin-bottom: 0.5rem; font-size: 0.875rem;"></div>
+
+          <button type="submit" id="forgot-submit">Send Reset Link</button>
+        </form>
+        <div style="margin-top: 1rem; text-align: center;">
+          <a href="#" id="back-to-login" style="font-size: 0.875rem; color: #2563eb; text-decoration: none;">Back to Login</a>
+        </div>
+      </div>
     </section>
   </div>
 
@@ -46,6 +64,13 @@
     const authForm = document.getElementById('auth-form');
     const authError = document.getElementById('auth-error');
     const submitButton = document.getElementById('auth-submit');
+    const forgotContainer = document.getElementById('forgot-container');
+    const forgotLink = document.getElementById('forgot-link');
+    const forgotPasswordSection = document.getElementById('forgot-password-section');
+    const tabsContainer = document.querySelector('.tabs');
+    const forgotForm = document.getElementById('forgot-form');
+    const forgotMessage = document.getElementById('forgot-message');
+    const backToLogin = document.getElementById('back-to-login');
 
     let mode = 'login';
     const nameField = document.getElementById('name-field');
@@ -60,6 +85,7 @@
         submitButton.textContent = 'Login';
         nameInput.removeAttribute('required');
         nameField.style.display = 'none';
+        if (forgotContainer) forgotContainer.style.display = 'block';
       } else {
         tabLogin.classList.remove('active');
         tabSignup.classList.add('active');
@@ -67,6 +93,7 @@
         submitButton.textContent = 'Sign Up';
         nameInput.setAttribute('required', '');
         nameField.style.display = 'block';
+        if (forgotContainer) forgotContainer.style.display = 'none';
       }
       authError.textContent = '';
       authError.style.display = 'none';
@@ -76,6 +103,52 @@
     tabSignup.addEventListener('click', () => setMode('signup'));
 
     setMode('login');
+
+    forgotLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      tabsContainer.style.display = 'none';
+      authForm.style.display = 'none';
+      formTitle.textContent = 'Reset Password';
+      forgotPasswordSection.style.display = 'block';
+      forgotMessage.textContent = '';
+      document.getElementById('forgot-email').value = '';
+    });
+
+    backToLogin.addEventListener('click', (e) => {
+      e.preventDefault();
+      forgotPasswordSection.style.display = 'none';
+      tabsContainer.style.display = 'flex';
+      authForm.style.display = 'block';
+      setMode('login');
+    });
+
+    forgotForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      forgotMessage.textContent = '';
+      forgotMessage.style.color = 'inherit';
+
+      const email = document.getElementById('forgot-email').value;
+
+      try {
+        const response = await fetch('/api/auth/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Request failed');
+        }
+
+        forgotMessage.style.color = 'green';
+        forgotMessage.textContent = data.message || 'Check your email for a reset link';
+      } catch (error) {
+        forgotMessage.style.color = 'red';
+        forgotMessage.textContent = error.message;
+      }
+    });
 
     authForm.addEventListener('submit', async (event) => {
       event.preventDefault();
