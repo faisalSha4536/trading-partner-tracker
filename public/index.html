@@ -17,6 +17,29 @@
 
     <div id="message-area"></div>
 
+    <div class="admin-only" style="margin-bottom: 1rem;">
+      <button id="connect-bitget-btn" style="width: auto;">Connect Bitget Account</button>
+    </div>
+
+    <div id="bitget-modal" class="modal-overlay admin-only" style="display: none;">
+      <div class="modal-content">
+        <button id="bitget-close-btn" class="modal-close-btn">X</button>
+        <h2>Connect Your Bitget Account</h2>
+        <label for="bitget-api-key">API Key</label>
+        <input type="text" id="bitget-api-key">
+
+        <label for="bitget-secret-key">Secret Key</label>
+        <input type="password" id="bitget-secret-key">
+
+        <label for="bitget-passphrase">Passphrase</label>
+        <input type="password" id="bitget-passphrase">
+
+        <div id="bitget-modal-message"></div>
+
+        <button type="button" id="bitget-save-btn">Test & Save</button>
+      </div>
+    </div>
+
     <section class="card">
       <h2>Balances</h2>
       <div class="table-container">
@@ -33,6 +56,54 @@
           <tbody></tbody>
         </table>
       </div>
+    </section>
+
+    <section class="card">
+      <h2>P&L History</h2>
+      <div class="admin-only" style="margin-bottom: 1rem; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+        <button id="sync-bitget-btn" style="display: none; width: auto;">Sync Bitget Trades</button>
+        <input type="date" id="bitget-sync-from-date" style="display: none; margin-bottom: 0; width: auto;">
+        <button id="delete-selected-btn" style="display: none; width: auto; background: #dc2626;">Delete Selected</button>
+      </div>
+      <div style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 140px;">
+          <label for="pnl-filter-from">From</label>
+          <input type="date" id="pnl-filter-from" style="margin-bottom: 0;">
+        </div>
+        <div style="flex: 1; min-width: 140px;">
+          <label for="pnl-filter-to">To</label>
+          <input type="date" id="pnl-filter-to" style="margin-bottom: 0;">
+        </div>
+        <div>
+          <button type="button" id="pnl-filter-apply" style="margin-top: 0; width: auto;">Apply Filter</button>
+        </div>
+      </div>
+      <div class="table-container">
+        <table id="pnl-history-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Date</th>
+              <th>Amount</th>
+              <th>Type</th>
+              <th>Logged By</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card partner-only">
+      <h2>Privacy Settings</h2>
+      <form id="privacy-form">
+        <label>
+          <input type="checkbox" id="privacy-visible">
+          Show my details to other partners
+        </label>
+        <div id="privacy-form-error" class="inline-error"></div>
+        <button type="submit" id="privacy-submit">Save</button>
+      </form>
     </section>
 
     <section class="card admin-only">

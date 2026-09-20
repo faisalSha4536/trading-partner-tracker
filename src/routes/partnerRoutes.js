@@ -5,6 +5,7 @@ const {
   getPartnerById,
   getPartnerByUserId,
   deletePartner,
+  updatePartnerVisibility,
 } = require('../models/partnerModel');
 const { requireAuth, requireAdmin } = require('../middleware/authMiddleware');
 
@@ -21,7 +22,7 @@ router.get('/', requireAuth, async (req, res) => {
       if (!myPartnerRow) return res.status(403).json({ error: "No partner record linked to this account" });
       ownerId = myPartnerRow.owner_id;
     }
-    const partners = await getAllPartners(ownerId);
+    const partners = await getAllPartners(ownerId, req.userRole, req.user.id);
     res.json(partners);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -46,6 +47,19 @@ router.delete('/:id', requireAuth, requireAdmin, async (req, res) => {
     }
     await deletePartner(req.params.id);
     res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.patch('/me/visibility', requireAuth, async (req, res) => {
+  try {
+    const { is_visible_to_others } = req.body;
+    const myPartnerRow = await getPartnerByUserId(req.user.id);
+    if (!myPartnerRow) return res.status(404).json({ error: "No partner record found for this account" });
+
+    const updated = await updatePartnerVisibility(myPartnerRow.id, is_visible_to_others);
+    res.json(updated);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

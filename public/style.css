@@ -109,6 +109,14 @@ button:disabled {
   display: none;
 }
 
+.profit-text {
+  color: green;
+}
+
+.loss-text {
+  color: red;
+}
+
 .message {
   padding: 0.75rem 1rem;
   border-radius: 0.25rem;
@@ -126,6 +134,61 @@ button:disabled {
   background: #fee2e2;
   color: #991b1b;
   border: 1px solid #fca5a5;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #fff;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 400px;
+  box-sizing: border-box;
+  position: relative;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: transparent;
+  color: #6b7280;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  width: auto;
+  margin: 0;
+  padding: 0.25rem 0.5rem;
+}
+
+.modal-close-btn:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.modal-message-success {
+  color: green;
+  font-size: 0.875rem;
+  margin: 0.5rem 0;
+}
+
+.modal-message-error {
+  color: red;
+  font-size: 0.875rem;
+  margin: 0.5rem 0;
 }
 
 .header {
@@ -225,6 +288,33 @@ button:disabled {
   td {
     padding: 0.5rem;
   }
+}
+
+.duplicate-date-warning {
+  background-color: #fef9c3;
+}
+
+.acknowledge-warning {
+  background: #ca8a04;
+  color: #fff;
+  border: none;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.75rem;
+  border-radius: 0.2rem;
+  cursor: pointer;
+  width: auto;
+  margin: 0 0 0 0.4rem;
+  display: inline-block;
+}
+
+.acknowledge-warning:hover {
+  background: #a16207;
+}
+
+.conflict-summary {
+  font-size: 0.8rem;
+  color: #4b5563;
+  margin-top: 0.2rem;
 }
 
 @media (max-width: 360px) {

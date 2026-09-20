@@ -1,7 +1,7 @@
 const { supabase } = require('../config/supabaseClient');
 const { supabaseAdmin } = require('../config/supabaseAdminClient');
 
-async function getAllPartners(ownerId) {
+async function getAllPartners(ownerId, requestingUserRole, requestingUserId) {
   let query = supabase
     .from('partners')
     .select('*');
@@ -13,6 +13,13 @@ async function getAllPartners(ownerId) {
   const { data, error } = await query;
 
   if (error) throw error;
+
+  if (requestingUserRole === 'partner') {
+    return data.filter(
+      (partner) => partner.is_visible_to_others === true || partner.user_id === requestingUserId
+    );
+  }
+
   return data;
 }
 
@@ -75,10 +82,23 @@ async function deletePartner(id) {
   return { success: true };
 }
 
+async function updatePartnerVisibility(partnerId, isVisible) {
+  const { data, error } = await supabase
+    .from('partners')
+    .update({ is_visible_to_others: isVisible })
+    .eq('id', partnerId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
 module.exports = {
   getAllPartners,
   createPartner,
   getPartnerById,
   getPartnerByUserId,
   deletePartner,
+  updatePartnerVisibility,
 };

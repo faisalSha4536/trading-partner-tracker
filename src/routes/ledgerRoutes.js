@@ -1,6 +1,7 @@
 const express = require('express');
 const { addLedgerEntry } = require('../models/ledgerModel');
 const { requireAuth, requireAdmin } = require('../middleware/authMiddleware');
+const { notifyPartnersOfPnl } = require('../services/pushService');
 
 const router = express.Router();
 
@@ -45,7 +46,13 @@ router.post('/pnl', requireAuth, requireAdmin, async (req, res) => {
       partner_id: null,
       entry_date,
       owner_id: req.user.id,
+      source: 'manual',
     });
+    try {
+      await notifyPartnersOfPnl(req.user.id, amount, entry_date);
+    } catch (pushErr) {
+      console.error('Push notification error:', pushErr);
+    }
     res.json(entry);
   } catch (error) {
     res.status(500).json({ error: error.message });

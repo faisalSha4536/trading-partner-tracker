@@ -114,6 +114,39 @@
         localStorage.setItem('refresh_token', data.session?.refresh_token);
         localStorage.setItem('user_role', role || 'admin');
         localStorage.setItem('user_id', userId || '');
+
+        if ('serviceWorker' in navigator && 'PushManager' in window) {
+          try {
+            const registration = await navigator.serviceWorker.ready;
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+              const keyRes = await fetch('/api/push/vapid-public-key', {
+                headers: { 'Authorization': 'Bearer ' + accessToken }
+              });
+              const keyData = await keyRes.json();
+              if (keyData.publicKey) {
+                const padding = '='.repeat((4 - keyData.publicKey.length % 4) % 4);
+                const base64 = (keyData.publicKey + padding).replace(/-/g, '+').replace(/_/g, '/');
+                const rawData = window.atob(base64);
+                const applicationServerKey = Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+
+                const subscription = await registration.pushManager.subscribe({
+                  userVisibleOnly: true,
+                  applicationServerKey,
+                });
+
+                await fetch('/api/push/subscribe', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + accessToken },
+                  body: JSON.stringify(subscription),
+                });
+              }
+            }
+          } catch (e) {
+            console.error('Login push error:', e);
+          }
+        }
+
         window.location.href = '/index.html';
       } catch (error) {
         authError.textContent = error.message;

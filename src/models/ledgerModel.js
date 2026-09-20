@@ -16,10 +16,10 @@ async function getAllLedgerEntries(ownerId) {
   return data;
 }
 
-async function addLedgerEntry({ entry_type, amount, partner_id, entry_date, owner_id }) {
+async function addLedgerEntry({ entry_type, amount, partner_id, entry_date, owner_id, source = 'manual' }) {
   const { data, error } = await supabase
     .from('ledger')
-    .insert({ entry_type, amount, partner_id, entry_date, owner_id })
+    .insert({ entry_type, amount, partner_id, entry_date, owner_id, source })
     .select()
     .single();
 
@@ -47,8 +47,28 @@ async function getLedgerEntriesBeforeDate(date, ownerId) {
   });
 }
 
+async function getPnlEntries(ownerId) {
+  const { data, error } = await supabase
+    .from('ledger')
+    .select('*')
+    .eq('owner_id', ownerId)
+    .eq('entry_type', 'pnl')
+    .order('entry_date', { ascending: false });
+
+  if (error) throw error;
+  return data;
+}
+
+async function deleteLedgerEntry(id) {
+  const { error } = await supabase.from('ledger').delete().eq('id', id);
+  if (error) throw error;
+  return { success: true };
+}
+
 module.exports = {
   getAllLedgerEntries,
   addLedgerEntry,
   getLedgerEntriesBeforeDate,
+  getPnlEntries,
+  deleteLedgerEntry,
 };
