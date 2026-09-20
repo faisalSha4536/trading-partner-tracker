@@ -2,7 +2,7 @@ const { getAllPartners } = require('../models/partnerModel');
 const { getLedgerEntriesBeforeDate } = require('../models/ledgerModel');
 
 async function calculateBalances(asOfDate, owner_id, requestingUserRole, requestingUserId) {
-  const partners = await getAllPartners(owner_id, requestingUserRole, requestingUserId);
+  const partners = await getAllPartners(owner_id);
   const ledgerEntries = await getLedgerEntriesBeforeDate(asOfDate, owner_id);
 
   console.log('[calculateBalances] Raw ledger entries:', JSON.stringify(ledgerEntries, null, 2));
@@ -12,6 +12,7 @@ async function calculateBalances(asOfDate, owner_id, requestingUserRole, request
   const totalDeposited = Object.fromEntries(partnerIds.map((id) => [id, 0]));
   const names = Object.fromEntries(partners.map((partner) => [String(partner.id), partner.name]));
   const userIds = Object.fromEntries(partners.map((partner) => [String(partner.id), partner.user_id]));
+  const isVisibleMap = Object.fromEntries(partners.map((partner) => [String(partner.id), Boolean(partner.is_visible_to_others)]));
 
   for (const entry of ledgerEntries) {
     const entryType = String(entry.entry_type ?? '').toLowerCase();
@@ -63,6 +64,14 @@ async function calculateBalances(asOfDate, owner_id, requestingUserRole, request
       ratio,
     };
   });
+
+  if (requestingUserRole === 'partner') {
+    const filteredResult = result.filter(
+      (item) => isVisibleMap[item.partner_id] === true || String(item.user_id) === String(requestingUserId)
+    );
+    console.log('[calculateBalances] Filtered result for partner:', JSON.stringify(filteredResult, null, 2));
+    return filteredResult;
+  }
 
   console.log('[calculateBalances] Final result:', JSON.stringify(result, null, 2));
   return result;

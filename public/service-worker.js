@@ -29,3 +29,20 @@ self.addEventListener('fetch', (event) => {
       })
   );
 });
+
+self.addEventListener('push', (event) => {
+  let data = { title: 'New Update', body: 'Something changed' };
+  try {
+    data = event.data.json();
+  } catch (e) {
+    console.error('Push event data parsing failed:', e);
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+    })
+  );
+});

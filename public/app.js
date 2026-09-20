@@ -217,7 +217,11 @@ function renderPnlHistory(entries) {
       const formatAmt = (n) => (n >= 0 ? `+$${n.toFixed(2)}` : `-$${Math.abs(n).toFixed(2)}`);
       const summaryText = `Manual: ${formatAmt(manualSum)} | Bitget Sync: ${formatAmt(syncSum)}`;
 
-      warningIndicator = ` <span title="Multiple entries exist for this date — check for double-counting">⚠️</span> <button class="acknowledge-warning" data-entry-date="${date}">Mark as Reviewed</button><div class="conflict-summary">${summaryText}</div>`;
+      const acknowledgeButton = userRole === 'admin'
+        ? ` <button class="acknowledge-warning" data-entry-date="${date}">Mark as Reviewed</button>`
+        : '';
+
+      warningIndicator = ` <span title="Multiple entries exist for this date — check for double-counting">⚠️</span>${acknowledgeButton}<div class="conflict-summary">${summaryText}</div>`;
     }
 
     const selectCell = userRole === 'admin'
