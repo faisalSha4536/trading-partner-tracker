@@ -81,7 +81,7 @@ function renderBalances(balances) {
     const loggedInUserId = localStorage.getItem('user_id');
     const isOwnRow = String(user_id || '') === String(loggedInUserId || '');
     const removeCell = userRole === 'admin' && !isOwnRow
-      ? `<td><button class="remove-partner" data-partner-id="${partner_id}">Remove</button></td>`
+      ? `<td><button class="remove-partner btn-danger" data-partner-id="${partner_id}">Remove</button></td>`
       : '<td></td>';
 
     const row = document.createElement('tr');
@@ -802,4 +802,43 @@ if ('serviceWorker' in navigator) {
       .then(() => console.log('Service worker registered'))
       .catch((err) => console.error('Service worker registration failed:', err));
   });
+}
+
+function moveSidebarHighlight(activeButton) {
+  const highlight = document.getElementById('sidebar-highlight');
+  const sidebar = document.getElementById('desktop-sidebar');
+  if (!highlight || !sidebar || !activeButton) return;
+  const sidebarRect = sidebar.getBoundingClientRect();
+  const btnRect = activeButton.getBoundingClientRect();
+  const offsetTop = btnRect.top - sidebarRect.top;
+  highlight.style.height = btnRect.height + 'px';
+  highlight.style.transform = `translateY(${offsetTop}px)`;
+}
+
+document.querySelectorAll('.nav-item, .sidebar-item').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const targetId = btn.getAttribute('data-target');
+
+    document.querySelectorAll('[data-tab]').forEach((section) => {
+      section.style.display = section.id === targetId ? 'block' : 'none';
+    });
+
+    document.querySelectorAll('.nav-item, .sidebar-item').forEach((navBtn) => {
+      navBtn.classList.remove('active');
+    });
+
+    document.querySelectorAll(`[data-target="${targetId}"]`).forEach((matchingBtn) => {
+      matchingBtn.classList.add('active');
+    });
+
+    const activeSidebarBtn = document.querySelector(`.sidebar-item[data-target="${targetId}"]`);
+    if (activeSidebarBtn) {
+      moveSidebarHighlight(activeSidebarBtn);
+    }
+  });
+});
+
+const initialActiveSidebar = document.querySelector('.sidebar-item.active');
+if (initialActiveSidebar) {
+  moveSidebarHighlight(initialActiveSidebar);
 }

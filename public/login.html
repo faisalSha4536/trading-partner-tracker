@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trading Partners - Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Trading Partners</title>
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#14161a">
 </head>
 <body>
   <div class="container">
@@ -32,27 +32,19 @@
         <label for="password">Password</label>
         <input type="password" id="password" required>
 
-        <div id="forgot-container" style="margin-top: 0.5rem; margin-bottom: 1rem;">
-          <a href="#" id="forgot-link" style="font-size: 0.875rem; color: #2563eb; text-decoration: none;">Forgot Password?</a>
-        </div>
-
         <div id="auth-error" class="inline-error"></div>
 
         <button type="submit" id="auth-submit">Login</button>
       </form>
 
-      <div id="forgot-password-section" style="display: none;">
-        <form id="forgot-form">
-          <label for="forgot-email">Email</label>
-          <input type="email" id="forgot-email" required>
+      <button id="forgot-password-link" class="link-button">Forgot Password?</button>
 
-          <div id="forgot-message" style="margin-top: 0.5rem; margin-bottom: 0.5rem; font-size: 0.875rem;"></div>
-
-          <button type="submit" id="forgot-submit">Send Reset Link</button>
-        </form>
-        <div style="margin-top: 1rem; text-align: center;">
-          <a href="#" id="back-to-login" style="font-size: 0.875rem; color: #2563eb; text-decoration: none;">Back to Login</a>
-        </div>
+      <div id="forgot-password-form" style="display:none;">
+        <label for="reset-email">Email</label>
+        <input type="email" id="reset-email">
+        <button id="send-reset-link" class="btn-primary">Send Reset Link</button>
+        <button id="back-to-login" class="link-button">Back to Login</button>
+        <div id="reset-message" style="margin-top:12px; font-size:13px;"></div>
       </div>
     </section>
   </div>
@@ -64,13 +56,13 @@
     const authForm = document.getElementById('auth-form');
     const authError = document.getElementById('auth-error');
     const submitButton = document.getElementById('auth-submit');
-    const forgotContainer = document.getElementById('forgot-container');
-    const forgotLink = document.getElementById('forgot-link');
-    const forgotPasswordSection = document.getElementById('forgot-password-section');
+    const forgotPasswordLink = document.getElementById('forgot-password-link');
+    const forgotPasswordForm = document.getElementById('forgot-password-form');
     const tabsContainer = document.querySelector('.tabs');
-    const forgotForm = document.getElementById('forgot-form');
-    const forgotMessage = document.getElementById('forgot-message');
-    const backToLogin = document.getElementById('back-to-login');
+    const resetEmailInput = document.getElementById('reset-email');
+    const sendResetLinkBtn = document.getElementById('send-reset-link');
+    const backToLoginBtn = document.getElementById('back-to-login');
+    const resetMessage = document.getElementById('reset-message');
 
     let mode = 'login';
     const nameField = document.getElementById('name-field');
@@ -85,7 +77,7 @@
         submitButton.textContent = 'Login';
         nameInput.removeAttribute('required');
         nameField.style.display = 'none';
-        if (forgotContainer) forgotContainer.style.display = 'block';
+        if (forgotPasswordLink) forgotPasswordLink.style.display = 'inline-block';
       } else {
         tabLogin.classList.remove('active');
         tabSignup.classList.add('active');
@@ -93,41 +85,53 @@
         submitButton.textContent = 'Sign Up';
         nameInput.setAttribute('required', '');
         nameField.style.display = 'block';
-        if (forgotContainer) forgotContainer.style.display = 'none';
+        if (forgotPasswordLink) forgotPasswordLink.style.display = 'none';
       }
       authError.textContent = '';
       authError.style.display = 'none';
     }
 
-    tabLogin.addEventListener('click', () => setMode('login'));
-    tabSignup.addEventListener('click', () => setMode('signup'));
+    tabLogin.addEventListener('click', () => {
+      forgotPasswordForm.style.display = 'none';
+      authForm.style.display = 'block';
+      tabsContainer.style.display = 'flex';
+      setMode('login');
+    });
+
+    tabSignup.addEventListener('click', () => {
+      forgotPasswordForm.style.display = 'none';
+      authForm.style.display = 'block';
+      tabsContainer.style.display = 'flex';
+      setMode('signup');
+    });
 
     setMode('login');
 
-    forgotLink.addEventListener('click', (e) => {
+    forgotPasswordLink.addEventListener('click', (e) => {
       e.preventDefault();
       tabsContainer.style.display = 'none';
       authForm.style.display = 'none';
+      forgotPasswordLink.style.display = 'none';
       formTitle.textContent = 'Reset Password';
-      forgotPasswordSection.style.display = 'block';
-      forgotMessage.textContent = '';
-      document.getElementById('forgot-email').value = '';
+      forgotPasswordForm.style.display = 'block';
+      resetMessage.textContent = '';
+      resetEmailInput.value = '';
     });
 
-    backToLogin.addEventListener('click', (e) => {
+    backToLoginBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      forgotPasswordSection.style.display = 'none';
+      forgotPasswordForm.style.display = 'none';
       tabsContainer.style.display = 'flex';
       authForm.style.display = 'block';
       setMode('login');
     });
 
-    forgotForm.addEventListener('submit', async (e) => {
+    sendResetLinkBtn.addEventListener('click', async (e) => {
       e.preventDefault();
-      forgotMessage.textContent = '';
-      forgotMessage.style.color = 'inherit';
+      resetMessage.textContent = '';
+      resetMessage.style.color = 'inherit';
 
-      const email = document.getElementById('forgot-email').value;
+      const email = resetEmailInput.value;
 
       try {
         const response = await fetch('/api/auth/forgot-password', {
@@ -142,11 +146,11 @@
           throw new Error(data.error || 'Request failed');
         }
 
-        forgotMessage.style.color = 'green';
-        forgotMessage.textContent = data.message || 'Check your email for a reset link';
+        resetMessage.style.color = 'var(--profit, green)';
+        resetMessage.textContent = data.message || 'Check your email for a reset link';
       } catch (error) {
-        forgotMessage.style.color = 'red';
-        forgotMessage.textContent = error.message;
+        resetMessage.style.color = 'var(--loss, red)';
+        resetMessage.textContent = error.message;
       }
     });
 
