@@ -71,25 +71,65 @@ async function fetchBalances() {
 
 function renderBalances(balances) {
   console.log('[renderBalances] Raw balances before render:', JSON.parse(JSON.stringify(balances)));
+  const thead = document.querySelector('#balance-table thead tr');
   const tbody = document.querySelector('#balance-table tbody');
+  const isAdmin = userRole === 'admin';
+  const colCount = isAdmin ? 7 : 5;
+
+  thead.innerHTML = `
+    <th>Name</th>
+    <th>Deposited</th>
+    <th>Current Balance</th>
+    <th>Ratio</th>
+    ${isAdmin ? '<th>Margin %</th><th>Margin Owed</th>' : ''}
+    <th></th>
+  `;
   tbody.innerHTML = '';
 
-  balances.forEach(({ partner_id, user_id, name, total_deposited, current_balance, ratio }) => {
+  if (balances.length === 0) {
+    const row = document.createElement('tr');
+    row.innerHTML = `<td colspan="${colCount}" class="empty-state">No partners added yet — click 'Add Partner' to get started.</td>`;
+    tbody.appendChild(row);
+    return;
+  }
+
+  balances.forEach(({ partner_id, user_id, name, total_deposited, current_balance, ratio, margin_percentage, margin_amount }) => {
     const depositedValue = Number(total_deposited ?? 0);
     const balanceValue = Number(current_balance ?? 0);
     const ratioValue = Number(ratio ?? 0);
+    const marginValue = Number(margin_percentage ?? 0);
+    const marginAmountValue = Number(margin_amount ?? 0);
     const loggedInUserId = localStorage.getItem('user_id');
+    const isAdmin = String(userRole || '').toLowerCase() === 'admin';
     const isOwnRow = String(user_id || '') === String(loggedInUserId || '');
-    const removeCell = userRole === 'admin' && !isOwnRow
-      ? `<td><button class="remove-partner btn-danger" data-partner-id="${partner_id}">Remove</button></td>`
-      : '<td></td>';
+    const removeCell = isAdmin && !isOwnRow
+      ? `<td data-label="Actions"><button class="remove-partner btn-danger" data-partner-id="${partner_id}">Remove</button></td>`
+      : '<td data-label="Actions"></td>';
+    const marginCell = isAdmin
+      ? (isOwnRow
+          ? `<td data-label="Margin %">${marginValue.toFixed(1)}%</td>`
+          : `<td data-label="Margin %">${marginValue.toFixed(1)}% <button type="button" class="edit-margin-btn link-button" data-partner-id="${partner_id}" data-margin="${marginValue}">Edit</button></td>`)
+      : '';
+    const marginOwedCell = isAdmin
+      ? (isOwnRow || !margin_amount || marginAmountValue === 0
+          ? `<td data-label="Margin Owed">—</td>`
+          : `<td data-label="Margin Owed">${marginAmountValue.toFixed(2)}</td>`)
+      : '';
 
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td>${name ?? 'Unknown'}</td>
-      <td>${depositedValue.toFixed(2)}</td>
-      <td>${balanceValue.toFixed(2)}</td>
-      <td>${(ratioValue * 100).toFixed(2)}%</td>
+      <td class="card-summary" data-label="Name">
+        <span>${name ?? 'Unknown'}</span>
+        <span style="display:flex; align-items:center; gap:10px;">
+          <span>$${balanceValue.toFixed(2)}</span>
+          <span class="card-expand-icon">▾</span>
+        </span>
+      </td>
+      <td data-label="Deposited">${depositedValue.toFixed(2)}</td>
+      <td data-label="Current Balance">${balanceValue.toFixed(2)}</td>
+      <td data-label="Ratio">${(ratioValue * 100).toFixed(2)}%</td>
+      ${marginCell}
+      ${marginOwedCell}
       ${removeCell}
     `;
     tbody.appendChild(row);
@@ -115,7 +155,7 @@ async function fetchPartners() {
   if (userRole === 'partner') {
     const loggedInUserId = localStorage.getItem('user_id');
     const myRow = partners.find(p => String(p.user_id) === String(loggedInUserId));
-    const checkbox = document.getElementById('privacy-visible');
+    const checkbox = document.getElementById('visibility-checkbox');
     if (myRow && checkbox) {
       checkbox.checked = Boolean(myRow.is_visible_to_others);
     }
@@ -125,7 +165,7 @@ async function fetchPartners() {
 async function refreshAll() {
   const tasks = [fetchBalances(), fetchPartners(), loadPnlHistory()];
   if (userRole === 'admin') {
-    tasks.push(checkBitgetStatus());
+    tasks.push(checkBitgetStatus(), loadTransactionLog());
   }
   await Promise.all(tasks);
 }
@@ -138,11 +178,36 @@ async function checkBitgetStatus() {
     response = await handleApiResponse(response, doFetch);
     const data = await response.json();
     const btn = document.getElementById('connect-bitget-btn');
+    const statusText = document.getElementById('bitget-status-text');
     if (btn) {
       if (data && data.connected) {
-        btn.textContent = '✅ Bitget Connected';
+        if (data.is_valid === false) {
+          btn.textContent = 'Reconnect';
+          btn.dataset.connected = 'false';
+        } else {
+          btn.textContent = 'Disconnect';
+          btn.dataset.connected = 'true';
+        }
       } else {
-        btn.textContent = 'Connect Bitget Account';
+        btn.textContent = 'Connect';
+        btn.dataset.connected = 'false';
+      }
+    }
+    if (statusText) {
+      if (data && data.connected) {
+        if (data.is_valid === false) {
+          statusText.textContent = 'Connection Invalid — Reconnect Required';
+          statusText.classList.add('loss-text');
+          statusText.classList.remove('connected');
+        } else {
+          statusText.textContent = 'Connected';
+          statusText.classList.add('connected');
+          statusText.classList.remove('loss-text');
+        }
+      } else {
+        statusText.textContent = 'Not Connected';
+        statusText.classList.remove('connected');
+        statusText.classList.remove('loss-text');
       }
     }
     const syncBtn = document.getElementById('sync-bitget-btn');
@@ -161,7 +226,59 @@ async function checkBitgetStatus() {
   }
 }
 
-let allPnlEntries = [];
+async function loadTransactionLog() {
+  console.log('[loadTransactionLog] Requesting /api/balances/transaction-log');
+  const doFetch = () => fetch('/api/balances/transaction-log', { headers: getAuthHeaders() });
+  let response = await doFetch();
+  response = await handleApiResponse(response, doFetch);
+  const entries = await response.json();
+  console.log('[loadTransactionLog] Received:', entries);
+  renderTransactionLog(entries);
+}
+
+function renderTransactionLog(entries) {
+  const thead = document.querySelector('#transaction-log-table thead tr');
+  if (thead) {
+    thead.innerHTML = `
+      <th>Date</th>
+      <th>Partner</th>
+      <th>Type</th>
+      <th>Amount</th>
+    `;
+  }
+  const tbody = document.querySelector('#transaction-log-table tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  if (entries.length === 0) {
+    const row = document.createElement('tr');
+    row.innerHTML = `<td colspan="4" class="empty-state">No transactions logged yet.</td>`;
+    tbody.appendChild(row);
+    return;
+  }
+
+  entries.forEach(({ entry_date, entry_type, amount, partners }) => {
+    const dateStr = entry_date ? entry_date.split('T')[0] : '';
+    const partnerName = partners?.name ?? 'Unknown';
+    const typeStr = entry_type ? entry_type.charAt(0).toUpperCase() + entry_type.slice(1) : '';
+    const amountValue = Number(amount ?? 0);
+
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td class="card-summary" data-label="Date">
+        <span>${dateStr}</span>
+        <span style="display:flex; align-items:center; gap:10px;">
+          <span>$${amountValue.toFixed(2)}</span>
+          <span class="card-expand-icon">▾</span>
+        </span>
+      </td>
+      <td data-label="Partner">${partnerName}</td>
+      <td data-label="Type">${typeStr}</td>
+      <td data-label="Amount">${amountValue.toFixed(2)}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
 
 async function loadPnlHistory() {
   console.log('[loadPnlHistory] Requesting /api/balances/pnl-history');
@@ -175,9 +292,25 @@ async function loadPnlHistory() {
 }
 
 function renderPnlHistory(entries) {
+  const thead = document.querySelector('#pnl-history-table thead tr');
+  if (thead) {
+    thead.innerHTML = `
+      <th>Date</th>
+      <th>Amount</th>
+      <th>Type</th>
+      <th>Logged By</th>
+    `;
+  }
   const tbody = document.querySelector('#pnl-history-table tbody');
   if (!tbody) return;
   tbody.innerHTML = '';
+
+  if (entries.length === 0) {
+    const row = document.createElement('tr');
+    row.innerHTML = `<td colspan="4" class="empty-state">No profit or loss entries yet — add one manually or sync from Bitget.</td>`;
+    tbody.appendChild(row);
+    return;
+  }
 
   const deleteSelectedBtn = document.getElementById('delete-selected-btn');
   if (deleteSelectedBtn) {
@@ -224,20 +357,28 @@ function renderPnlHistory(entries) {
       warningIndicator = ` <span title="Multiple entries exist for this date — check for double-counting">⚠️</span>${acknowledgeButton}<div class="conflict-summary">${summaryText}</div>`;
     }
 
-    const selectCell = userRole === 'admin'
-      ? `<td><input type="checkbox" class="pnl-select-checkbox" data-pnl-id="${entry.id}"></td>`
-      : '<td></td>';
+    const selectCheckboxHtml = String(userRole || '').toLowerCase() === 'admin'
+      ? `<input type="checkbox" class="pnl-select-checkbox" data-pnl-id="${entry.id}" onclick="event.stopPropagation();" style="margin-right: 8px;">`
+      : '';
 
     const row = document.createElement('tr');
     if (isConflict) {
       row.className = 'duplicate-date-warning';
     }
     row.innerHTML = `
-      ${selectCell}
-      <td>${date}</td>
-      <td>${absAmount}</td>
-      <td><span class="${typeClass}">${typeText}</span></td>
-      <td>${sourceText}${warningIndicator}</td>
+      <td class="card-summary" data-label="Date">
+        <div style="display:flex; align-items:center;">
+          ${selectCheckboxHtml}
+          <span>${date}</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span class="${typeClass}">$${absAmount}</span>
+          <span class="card-expand-icon">▾</span>
+        </div>
+      </td>
+      <td data-label="Amount">${absAmount}</td>
+      <td data-label="Type"><span class="${typeClass}">${typeText}</span></td>
+      <td data-label="Logged By">${sourceText}${warningIndicator}</td>
     `;
     tbody.appendChild(row);
   });
@@ -255,6 +396,18 @@ function showMessage(text, type = 'success') {
   message.textContent = text;
   area.appendChild(message);
   setTimeout(() => message.remove(), type === 'success' ? 2000 : 3000);
+}
+
+function setButtonLoading(button, isLoading, loadingText = 'Loading...') {
+  if (!button) return;
+  if (isLoading) {
+    button.dataset.originalText = button.textContent;
+    button.textContent = loadingText;
+    button.disabled = true;
+  } else {
+    button.textContent = button.dataset.originalText || button.textContent;
+    button.disabled = false;
+  }
 }
 
 function setLoading(button, loadingText = 'Saving...') {
@@ -300,6 +453,11 @@ function applyRoleBasedVisibility() {
       element.style.display = 'none';
     });
   }
+  console.log(localStorage.getItem('user_role'));
+  const privacyCheckboxRow = document.getElementById('privacy-checkbox-row');
+  if (privacyCheckboxRow) {
+    privacyCheckboxRow.style.display = userRole === 'partner' ? 'block' : 'none';
+  }
 }
 
 document.getElementById('logout-button').addEventListener('click', () => {
@@ -311,10 +469,42 @@ document.getElementById('logout-button').addEventListener('click', () => {
 
 const connectBitgetBtn = document.getElementById('connect-bitget-btn');
 if (connectBitgetBtn) {
-  connectBitgetBtn.addEventListener('click', () => {
-    const modal = document.getElementById('bitget-modal');
-    if (modal) {
-      modal.style.display = 'flex';
+  connectBitgetBtn.addEventListener('click', async () => {
+    if (connectBitgetBtn.textContent === 'Disconnect' || connectBitgetBtn.dataset.connected === 'true') {
+      if (!window.confirm("Disconnect your exchange account? Auto-sync will stop working until reconnected.")) {
+        return;
+      }
+      try {
+        const doFetch = () => fetch('/api/exchange/bitget/disconnect', {
+          method: 'DELETE',
+          headers: getAuthHeaders(),
+        });
+        let response = await doFetch();
+        response = await handleApiResponse(response, doFetch);
+        await response.json();
+
+        connectBitgetBtn.textContent = 'Connect';
+        connectBitgetBtn.dataset.connected = 'false';
+        const statusText = document.getElementById('bitget-status-text');
+        if (statusText) {
+          statusText.textContent = 'Not Connected';
+          statusText.classList.remove('connected');
+        }
+        const syncBtn = document.getElementById('sync-bitget-btn');
+        const syncDateInput = document.getElementById('bitget-sync-from-date');
+        if (syncBtn) syncBtn.style.display = 'none';
+        if (syncDateInput) syncDateInput.style.display = 'none';
+
+        showMessage('Exchange disconnected successfully');
+      } catch (error) {
+        console.error('Disconnect error:', error);
+        showMessage(error.message, 'error');
+      }
+    } else {
+      const modal = document.getElementById('bitget-modal');
+      if (modal) {
+        modal.style.display = 'flex';
+      }
     }
   });
 }
@@ -322,7 +512,7 @@ if (connectBitgetBtn) {
 const syncBitgetBtn = document.getElementById('sync-bitget-btn');
 if (syncBitgetBtn) {
   syncBitgetBtn.addEventListener('click', async () => {
-    setLoading(syncBitgetBtn, 'Syncing...');
+    setButtonLoading(syncBitgetBtn, true, 'Syncing...');
     try {
       const dateInput = document.getElementById('bitget-sync-from-date');
       const customStartDate = dateInput ? dateInput.value.trim() : '';
@@ -335,19 +525,45 @@ if (syncBitgetBtn) {
       });
       let response = await doFetch();
       response = await handleApiResponse(response, doFetch);
-      const data = await response.json();
+    const data = await response.json();
+    console.log('Status data received:', data);
 
-      resetButton(syncBitgetBtn);
+      if (data.synced === false) {
+        throw new Error(data.reason || 'No exchange connected');
+      }
+
       const entriesCreated = data.entriesCreated ?? 0;
       showMessage(`Synced ${entriesCreated} new entries`);
       await refreshAll();
       await loadPnlHistory();
     } catch (error) {
-      resetButton(syncBitgetBtn);
-      showMessage(error.message, 'error');
+      const rawMessage = error.message || 'Sync failed';
+      const isConnectionError = /no credentials|not enabled|no exchange|credentials not found|not connected|unauthorized|sync not enabled/i.test(rawMessage);
+      const isAuthError = /40009|Invalid ACCESS-SIGN|Invalid API|ACCESS-SIGN|API[-\s]?key|signature|unauthorized|401|403|invalid|revoked|expired/i.test(rawMessage);
+      if (isConnectionError) {
+        showMessage('No exchange connected — go to Settings to connect an exchange account.', 'error');
+      } else if (isAuthError) {
+        showMessage('Bitget sync failed — your API credentials may have been changed or revoked. Please reconnect your account in Settings.', 'error');
+      } else {
+        showMessage(rawMessage, 'error');
+      }
+    } finally {
+      setButtonLoading(syncBitgetBtn, false);
     }
   });
 }
+
+document.querySelector('#balance-table tbody').addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' && event.target.classList.contains('margin-input')) {
+    event.preventDefault();
+    const input = event.target;
+    const td = input.closest('td');
+    const saveButton = td.querySelector('.save-margin-btn');
+    if (saveButton) {
+      saveButton.click();
+    }
+  }
+});
 
 const deleteSelectedBtn = document.getElementById('delete-selected-btn');
 if (deleteSelectedBtn) {
@@ -360,6 +576,8 @@ if (deleteSelectedBtn) {
     if (!window.confirm(`Are you sure you want to delete ${ids.length} selected P&L entries?`)) {
       return;
     }
+
+    setButtonLoading(deleteSelectedBtn, true, 'Deleting...');
 
     try {
       for (const pnlId of ids) {
@@ -374,6 +592,8 @@ if (deleteSelectedBtn) {
     } catch (error) {
       console.error('Delete selected error:', error);
       showMessage(error.message, 'error');
+    } finally {
+      setButtonLoading(deleteSelectedBtn, false);
     }
   });
 }
@@ -436,9 +656,16 @@ if (bitgetSaveBtn) {
       }
 
       const connectBtn = document.getElementById('connect-bitget-btn');
+      const statusText = document.getElementById('bitget-status-text');
       if (connectBtn) {
-        connectBtn.textContent = '✅ Bitget Connected';
+        connectBtn.textContent = 'Disconnect';
+        connectBtn.dataset.connected = 'true';
       }
+      if (statusText) {
+        statusText.textContent = 'Connected';
+        statusText.classList.add('connected');
+      }
+      await checkBitgetStatus();
 
       setTimeout(() => {
         const modal = document.getElementById('bitget-modal');
@@ -485,7 +712,7 @@ document.getElementById('pnl-form').addEventListener('submit', async (event) => 
     amount = -amount;
   }
 
-  setLoading(submitButton);
+  setButtonLoading(submitButton, true, 'Logging...');
 
   try {
     const doFetch = () => fetch('/api/ledger/pnl', {
@@ -501,11 +728,12 @@ document.getElementById('pnl-form').addEventListener('submit', async (event) => 
     event.target.reset();
     setToday('pnl-date');
     await refreshAll();
+    document.getElementById('add-pnl-modal').classList.remove('open');
     showMessage('P&L logged successfully');
   } catch (error) {
     showMessage(error.message, 'error');
   } finally {
-    resetButton(submitButton);
+    setButtonLoading(submitButton, false);
   }
 });
 
@@ -537,7 +765,7 @@ document.getElementById('transaction-form').addEventListener('submit', async (ev
 
   const amount = parseFloat(amountValue);
 
-  setLoading(submitButton);
+  setButtonLoading(submitButton, true, 'Saving...');
 
   try {
     const doFetch = () => fetch(`/api/ledger/${type}`, {
@@ -553,17 +781,23 @@ document.getElementById('transaction-form').addEventListener('submit', async (ev
     event.target.reset();
     setToday('transaction-date');
     await refreshAll();
+    document.getElementById('add-balance-modal').classList.remove('open');
     showMessage(`${type === 'deposit' ? 'Deposit' : 'Withdrawal'} logged successfully`);
   } catch (error) {
     showMessage(error.message, 'error');
   } finally {
-    resetButton(submitButton);
+    setButtonLoading(submitButton, false);
   }
 });
 
 document.getElementById('partner-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   clearInlineErrors();
+  const addPartnerError = document.getElementById('add-partner-error');
+  if (addPartnerError) {
+    addPartnerError.textContent = '';
+    addPartnerError.style.display = 'none';
+  }
 
   const name = document.getElementById('partner-name').value.trim();
   const email = document.getElementById('partner-email').value.trim();
@@ -588,20 +822,27 @@ document.getElementById('partner-form').addEventListener('submit', async (event)
   }
 
   const depositAmount = depositAmountValue ? parseFloat(depositAmountValue) : 0;
+  const marginValue = document.getElementById('new-partner-margin').value;
+  const margin_percentage = marginValue !== '' ? parseFloat(marginValue) : 0;
+
+  if (Number.isNaN(margin_percentage) || margin_percentage < 0 || margin_percentage > 100) {
+    showInlineError('partner-form-error', 'Margin percentage must be between 0 and 100');
+    return;
+  }
 
   if (depositAmount > 0 && !entry_date) {
     showInlineError('partner-form-error', 'Please select a date for the initial deposit');
     return;
   }
 
-  setLoading(submitButton);
+  setButtonLoading(submitButton, true, 'Adding...');
 
   try {
     console.log('[Add Partner] Creating partner:', name);
     const doFetch = () => fetch('/api/partners', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ name, email, password, margin_percentage }),
     });
 
     let response = await doFetch();
@@ -626,26 +867,27 @@ document.getElementById('partner-form').addEventListener('submit', async (event)
     event.target.reset();
     setToday('partner-deposit-date');
     await refreshAll();
+    document.getElementById('add-partner-modal').classList.remove('open');
     console.log('[Add Partner] Refresh complete');
     showMessage('Partner added');
   } catch (error) {
     console.error('[Add Partner] Error:', error);
+    const addPartnerError = document.getElementById('add-partner-error');
+    if (addPartnerError) {
+      addPartnerError.textContent = error.message;
+      addPartnerError.style.display = 'block';
+    }
     showMessage(error.message, 'error');
   } finally {
-    resetButton(submitButton);
+    setButtonLoading(submitButton, false);
   }
 });
 
-const privacyForm = document.getElementById('privacy-form');
-if (privacyForm) {
-  privacyForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    clearInlineErrors();
-
-    const is_visible_to_others = document.getElementById('privacy-visible').checked;
-    const submitButton = document.getElementById('privacy-submit');
-
-    setLoading(submitButton);
+const visibilityCheckbox = document.getElementById('visibility-checkbox');
+if (visibilityCheckbox) {
+  visibilityCheckbox.addEventListener('change', async (event) => {
+    const messageEl = document.getElementById('privacy-notif-message');
+    const is_visible_to_others = event.target.checked;
 
     try {
       const doFetch = () => fetch('/api/partners/me/visibility', {
@@ -658,22 +900,119 @@ if (privacyForm) {
       response = await handleApiResponse(response, doFetch);
       await response.json();
 
+      if (messageEl) {
+        messageEl.textContent = 'Privacy setting updated';
+        messageEl.style.color = 'var(--profit)';
+      }
       await refreshAll();
-      showMessage('Privacy settings updated successfully');
     } catch (error) {
-      showMessage(error.message, 'error');
-    } finally {
-      resetButton(submitButton);
+      if (messageEl) {
+        messageEl.textContent = error.message;
+        messageEl.style.color = 'var(--loss)';
+      }
+    }
+  });
+}
+
+const notificationsCheckbox = document.getElementById('notifications-checkbox');
+if (notificationsCheckbox) {
+  notificationsCheckbox.checked = Notification.permission === 'granted';
+
+  notificationsCheckbox.addEventListener('change', async () => {
+    const messageEl = document.getElementById('privacy-notif-message');
+    if (notificationsCheckbox.checked) {
+      if (Notification.permission !== 'granted') {
+        await subscribeToPush();
+      }
+      if (messageEl) {
+        messageEl.textContent = 'Push notifications enabled';
+        messageEl.style.color = 'var(--profit)';
+      }
+    } else {
+      if (messageEl) {
+        messageEl.textContent = 'To disable notifications, remove permission for this site in your browser or phone settings.';
+        messageEl.style.color = 'var(--text-muted)';
+      }
     }
   });
 }
 
 document.querySelector('#balance-table tbody').addEventListener('click', async (event) => {
+  const summary = event.target.closest('.card-summary');
+  if (summary) {
+    const tr = summary.closest('tr');
+    if (tr) {
+      tr.classList.toggle('expanded');
+    }
+    return;
+  }
+
+  const editButton = event.target.closest('.edit-margin-btn') || event.target.closest('.edit-margin');
+  if (editButton) {
+    const partnerId = editButton.dataset.partnerId;
+    const currentValue = editButton.dataset.margin;
+    const td = editButton.closest('td');
+    if (!td) return;
+
+    td.innerHTML = `
+      <div style="display: flex; gap: 4px; align-items: center;">
+        <input type="number" class="margin-input" min="0" max="100" step="0.1" value="${currentValue}" style="width: 80px; padding: 4px 8px; font-size: 13px; margin: 0;">
+        <button type="button" class="save-margin-btn btn-secondary" data-partner-id="${partnerId}" style="padding: 4px 8px; font-size: 13px; margin: 0;" title="Save">✓</button>
+      </div>
+    `;
+    const input = td.querySelector('.margin-input');
+    if (input) {
+      input.focus();
+      input.select();
+    }
+    return;
+  }
+
+  const saveButton = event.target.closest('.save-margin-btn');
+  if (saveButton) {
+    const partnerId = saveButton.dataset.partnerId;
+    const td = saveButton.closest('td');
+    const input = td.querySelector('.margin-input');
+    if (!input) return;
+
+    const newValue = input.value;
+    const margin_percentage = parseFloat(newValue);
+    if (Number.isNaN(margin_percentage) || margin_percentage < 0 || margin_percentage > 100) {
+      showMessage('Margin percentage must be between 0 and 100', 'error');
+      return;
+    }
+
+    setButtonLoading(saveButton, true, '...');
+
+    try {
+      const doFetch = () => fetch(`/api/partners/${partnerId}/margin`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({ margin_percentage }),
+      });
+      let response = await doFetch();
+      response = await handleApiResponse(response, doFetch);
+      const responseData = await response.json();
+      console.log('[PATCH /api/partners/:id/margin] Response:', responseData);
+      await refreshAll();
+    } catch (error) {
+      console.error('Edit margin error:', error);
+      showMessage(error.message, 'error');
+    } finally {
+      setButtonLoading(saveButton, false);
+    }
+    return;
+  }
+
   const button = event.target.closest('.remove-partner');
   if (!button) return;
 
   const partnerId = button.dataset.partnerId;
   console.log('Removing partner:', partnerId);
+
+  if (!window.confirm("Are you sure you want to remove this partner? This cannot be undone.")) return;
+
+  setButtonLoading(button, true, 'Removing...');
 
   try {
     const doFetch = () => fetch(`/api/partners/${partnerId}`, { method: 'DELETE', headers: getAuthHeaders() });
@@ -683,10 +1022,34 @@ document.querySelector('#balance-table tbody').addEventListener('click', async (
     await refreshAll();
   } catch (error) {
     console.error('Remove partner error:', error);
+  } finally {
+    setButtonLoading(button, false);
   }
 });
 
+const transactionLogTbody = document.querySelector('#transaction-log-table tbody');
+if (transactionLogTbody) {
+  transactionLogTbody.addEventListener('click', (event) => {
+    const summary = event.target.closest('.card-summary');
+    if (summary) {
+      const tr = summary.closest('tr');
+      if (tr) {
+        tr.classList.toggle('expanded');
+      }
+    }
+  });
+}
+
 document.querySelector('#pnl-history-table tbody').addEventListener('click', async (event) => {
+  const summary = event.target.closest('.card-summary');
+  if (summary) {
+    const tr = summary.closest('tr');
+    if (tr) {
+      tr.classList.toggle('expanded');
+    }
+    return;
+  }
+
   const button = event.target.closest('.acknowledge-warning');
   if (!button) return;
 
@@ -793,7 +1156,6 @@ setToday('pnl-date');
 setToday('transaction-date');
 setToday('partner-deposit-date');
 setToday('pnl-filter-to');
-subscribeToPush();
 refreshAll();
 
 if ('serviceWorker' in navigator) {
@@ -835,6 +1197,10 @@ document.querySelectorAll('.nav-item, .sidebar-item').forEach((btn) => {
     if (activeSidebarBtn) {
       moveSidebarHighlight(activeSidebarBtn);
     }
+
+    if (targetId === 'tab-transactions') {
+      loadTransactionLog();
+    }
   });
 });
 
@@ -842,3 +1208,134 @@ const initialActiveSidebar = document.querySelector('.sidebar-item.active');
 if (initialActiveSidebar) {
   moveSidebarHighlight(initialActiveSidebar);
 }
+
+async function loadUserName() {
+  const input = document.getElementById('edit-name-input');
+  if (!input) return;
+  try {
+    const doFetch = () => fetch('/api/partners', { headers: getAuthHeaders() });
+    let response = await doFetch();
+    response = await handleApiResponse(response, doFetch);
+    const partners = await response.json();
+    const loggedInUserId = localStorage.getItem('user_id');
+    const myRow = partners.find(p => String(p.user_id) === String(loggedInUserId));
+    if (myRow) {
+      input.value = myRow.name || '';
+    }
+  } catch (error) {
+    console.error('[loadUserName] Error:', error);
+  }
+}
+
+loadUserName();
+
+document.getElementById('save-name-btn').addEventListener('click', async () => {
+  const button = document.getElementById('save-name-btn');
+  const messageEl = document.getElementById('edit-name-message');
+  const nameInput = document.getElementById('edit-name-input');
+  const name = nameInput ? nameInput.value.trim() : '';
+
+  if (!name) {
+    if (messageEl) {
+      messageEl.textContent = 'Name is required';
+      messageEl.style.color = 'var(--loss)';
+    }
+    return;
+  }
+
+  setButtonLoading(button, true, 'Saving...');
+
+  try {
+    const doFetch = () => fetch('/api/partners/me', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ name }),
+    });
+    let response = await doFetch();
+    response = await handleApiResponse(response, doFetch);
+    await response.json();
+
+    if (messageEl) {
+      messageEl.textContent = 'Name updated';
+      messageEl.style.color = 'var(--profit)';
+    }
+    await refreshAll();
+  } catch (error) {
+    if (messageEl) {
+      messageEl.textContent = error.message;
+      messageEl.style.color = 'var(--loss)';
+    }
+  } finally {
+    setButtonLoading(button, false);
+  }
+});
+
+document.getElementById('change-password-btn').addEventListener('click', async () => {
+  const button = document.getElementById('change-password-btn');
+  const messageEl = document.getElementById('change-password-message');
+  const currentPasswordInput = document.getElementById('current-password-input');
+  const newPasswordInput = document.getElementById('new-password-input');
+  const current_password = currentPasswordInput ? currentPasswordInput.value : '';
+  const new_password = newPasswordInput ? newPasswordInput.value : '';
+
+  if (!current_password || !new_password) {
+    if (messageEl) {
+      messageEl.textContent = 'Current and new password are required';
+      messageEl.style.color = 'var(--loss)';
+    }
+    return;
+  }
+
+  setButtonLoading(button, true, 'Updating...');
+
+  try {
+    const doFetch = () => fetch('/api/auth/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ current_password, new_password }),
+    });
+    let response = await doFetch();
+    response = await handleApiResponse(response, doFetch);
+    await response.json();
+
+    if (messageEl) {
+      messageEl.textContent = 'Password updated';
+      messageEl.style.color = 'var(--profit)';
+    }
+    if (currentPasswordInput) currentPasswordInput.value = '';
+    if (newPasswordInput) newPasswordInput.value = '';
+  } catch (error) {
+    if (messageEl) {
+      messageEl.textContent = error.message;
+      messageEl.style.color = 'var(--loss)';
+    }
+  } finally {
+    setButtonLoading(button, false);
+  }
+});
+
+document.getElementById('open-add-partner-btn').addEventListener('click', () => {
+  console.log('Add Partner button clicked');
+  const modal = document.getElementById('add-partner-modal');
+  console.log('Modal element found:', modal);
+  modal.classList.add('open');
+});
+
+document.getElementById('open-add-balance-btn').addEventListener('click', () => {
+  console.log('Add Balance button clicked');
+  const modal = document.getElementById('add-balance-modal');
+  console.log('Modal element found:', modal);
+  modal.classList.add('open');
+});
+
+document.getElementById('open-add-pnl-btn').addEventListener('click', () => {
+  document.getElementById('add-pnl-modal').classList.add('open');
+});
+
+document.querySelectorAll('.modal-overlay').forEach((overlay) => {
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) {
+      overlay.classList.remove('open');
+    }
+  });
+});

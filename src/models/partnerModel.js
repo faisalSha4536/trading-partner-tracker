@@ -23,7 +23,7 @@ async function getAllPartners(ownerId, requestingUserRole, requestingUserId) {
   return data;
 }
 
-async function createPartner(name, email, password, ownerId) {
+async function createPartner(name, email, password, ownerId, margin_percentage = 0) {
   const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email,
     password,
@@ -42,7 +42,7 @@ async function createPartner(name, email, password, ownerId) {
 
   const { data, error } = await supabase
     .from('partners')
-    .insert({ name, user_id: userId, owner_id: ownerId })
+    .insert({ name, user_id: userId, owner_id: ownerId, margin_percentage })
     .select()
     .single();
 

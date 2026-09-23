@@ -12,9 +12,15 @@
 - Checks async/await flow and expects `await` on fetch and render calls so UI updates are visible immediately. Confidence: 0.85
 - Prefers centralized/shared utility functions for repeated UI refresh logic (e.g., a single `refreshAll()`). Confidence: 0.85
 - Prefers loading/disabled states on buttons while requests are in flight. Confidence: 0.9
+- Prefers a single reusable button-loading helper (e.g., `setButtonLoading(button, isLoading, loadingText)`) over separate `setLoading`/`resetButton` functions. Confidence: 0.9
+- Expects button loading states to be reset in a `finally` block so buttons always re-enable, even when errors occur. Confidence: 0.9
+- Prefers descriptive, per-action loading text on buttons (e.g., `"Adding..."`, `"Saving..."`, `"Syncing..."`) rather than a generic `"Loading..."`. Confidence: 0.85
 - Prefers visible success or error message/toast feedback after form actions, with inline validation errors before submission. Confidence: 0.9
+- Prefers server-side form errors to be displayed inline near the relevant form, using the exact backend error text. Confidence: 0.9
+- Prefers inline error elements to be cleared at the start of each new submit attempt so stale errors don't linger. Confidence: 0.9
 - Prefers client-side form validation before submission (required fields, amount > 0, inline error text). Confidence: 0.95
 - Prefers grouping related UI into visually distinct cards/sections. Confidence: 0.85
+- When reorganizing settings or related controls, prefers consolidating them into grouped sections within the relevant tab and removing now-redundant standalone sections rather than leaving them fragmented. Confidence: 0.85
 - Prefers currency number inputs with `step="0.01"` to allow cents. Confidence: 0.9
 - Prefers event delegation (or freshly re-attaching listeners) for click handlers on dynamically rendered elements. Confidence: 0.9
 - Prefers binding per-item IDs via `data-*` attributes and reading them from `event.target.dataset` rather than relying on closures. Confidence: 0.9
@@ -33,8 +39,49 @@
 - Expects frontend styling to be mobile responsive by default, working well down to ~360px wide. Confidence: 0.9
 - Prefers touch-friendly UI targets with a minimum height of ~44px for buttons and inputs. Confidence: 0.9
 - Prefers a base font size of at least 16px to prevent iOS auto-zoom on input focus. Confidence: 0.85
+- Prefers inline data-entry forms to be converted into hidden popup modals triggered by buttons, following the project's existing modal placement and styling conventions. Confidence: 0.85
 - When asked for styling or layout changes, expects JavaScript logic to remain untouched and only CSS/HTML to be modified. Confidence: 0.95
 - When explicitly instructed not to modify the backend, expects only frontend changes and verification that server-side access controls remain intact. Confidence: 0.85
 - Prefers to derive a default display name from the email local-part when an explicit name is not provided. Confidence: 0.9
 - Wants POST/creation endpoints to return the newly created related entity alongside the primary response. Confidence: 0.85
 - Prefers to revert or remove code paths that become obsolete after a feature change, not just leave them in place. Confidence: 0.9
+- Prefers to preserve existing element IDs and JavaScript-referenced selectors when refactoring HTML structure. Confidence: 0.95
+- Prefers to separate styling/visibility concerns from markup changes (e.g., hide modals via CSS in a separate step, not inline styles). Confidence: 0.85
+- When instructed to append CSS, expects it added to the end of the file rather than inserted elsewhere. Confidence: 0.9
+- Prefers modals to become bottom sheets on mobile breakpoints. Confidence: 0.85
+- Uses CSS custom properties (variables) for theme values such as colors, borders, and radii. Confidence: 0.85
+- When debugging UI wiring, prefers explicit cross-referencing of IDs/selectors across HTML and JS before assuming typos. Confidence: 0.9
+- When a UI element fails to appear, expects investigation of CSS specificity, conflicting rules, and ancestor `display`/`visibility` that could override the visible state. Confidence: 0.9
+- Keeps modal overlays outside of hidden containers/tabs; a `display: none` ancestor suppresses a fixed-position child even after the modal gains its own visible class. Confidence: 0.9
+- Prefers consolidating duplicate CSS component definitions (e.g., `.modal-overlay`, `.modal-content`) to avoid conflicting or redundant rules. Confidence: 0.85
+- Prefers modal overlays to use a z-index higher than all other UI elements so they are never obscured by sidebars, nav bars, etc. Confidence: 0.85
+- Prefers polished modal designs with a header row containing a logo/image, title, and descriptive subtitle. Confidence: 0.85
+- When debugging a UI element that fails to appear, expects the assistant to report back the actual DOM nesting/ancestor structure and any blocking ancestors found. Confidence: 0.85
+- Expects previously implemented CSS rules/behaviors to remain intact when applying subsequent fixes. Confidence: 0.8
+- Prefers custom scrollbars styled with both WebKit `::-webkit-scrollbar-*` rules and standard `scrollbar-width`/`scrollbar-color` for cross-browser consistency. Confidence: 0.9
+- Prefers to keep status/display text separate from action button labels so buttons remain actionable (e.g., "Connect"/"Reconnect" rather than "✅ Connected"). Confidence: 0.85
+- Provides exact, copy-pasteable CSS snippets for styling changes and expects only CSS/visual fixes (no markup or logic changes). Confidence: 0.85
+- Wants empty-state messages/placeholders in tables and lists when there is no data, using a single spanning row with centered muted text. Confidence: 0.9
+- Wants destructive actions (e.g., deleting/removing records) to prompt for confirmation before proceeding. Confidence: 0.95
+- When adding code that depends on a module, expects the assistant to verify/add the required import at the top of the file. Confidence: 0.85
+- When implementing code that relies on middleware-provided request properties (e.g., `req.user.email`), expects the assistant to verify the middleware actually attaches those fields. Confidence: 0.85
+- Provides exact, copy-pasteable code snippets for code changes and expects them implemented as specified. Confidence: 0.85
+- Wants user-friendly, contextual error messages for API failures, distinguishing authentication/signature errors from generic failures. Confidence: 0.9
+- Prefers backend to wrap external API call failures with clearer, human-readable error messages so the frontend can reliably detect specific error cases. Confidence: 0.9
+- When an external API returns structured error details, wants the backend to propagate the provider's actual code/message to the frontend instead of a generic HTTP status message. Confidence: 0.85
+- When debugging external API integration failures, wants the full provider error response body (e.g., `error.response.data`) logged, not just the generic error message. Confidence: 0.85
+- Prefers reusing existing UI message elements rather than creating new ones when displaying feedback. Confidence: 0.85
+- Wants error messages to be actionable and guide users toward resolving the issue (e.g., "Please reconnect your account in Settings"). Confidence: 0.85
+- Expects frontend feature implementations to follow existing in-file patterns (e.g., `doFetch`/`handleApiResponse`, `setButtonLoading`, `refreshAll`). Confidence: 0.85
+- When implementing code that relies on existing database/model fields, expects the assistant to verify the underlying query or SELECT statement actually includes those fields. Confidence: 0.85
+- Prefers building lookup objects (id -> value) from entity lists before loops for efficient access, matching existing in-file lookup patterns. Confidence: 0.85
+- Expects server-side endpoints to validate required string inputs and trim whitespace before persisting. Confidence: 0.85
+- Expects server-side endpoints to validate numeric bounds (e.g., percentages must be between 0 and 100). Confidence: 0.8
+- Prefers `PATCH` for partial resource updates where only a subset of fields change. Confidence: 0.8
+- Wants `PATCH`/`PUT` update endpoints to return the updated record in the response. Confidence: 0.8
+- Prefers checkbox labels to display inline with the checkbox and text side by side (using `display: flex; align-items: center; gap`), not stacked vertically. Confidence: 0.9
+- When adding UI controls for an existing feature, wants only the input/display/edit wiring changed; underlying business/calculation logic should remain untouched. Confidence: 0.9
+- When adding a new frontend field, expects the assistant to verify and update the full data path through the backend route and database/model, not just the UI. Confidence: 0.85
+- Prefers simple `window.prompt` for quick single-value edits rather than building a full form/modal. Confidence: 0.8
+- Wants per-user sensitive data visible to the owning user (and admins), but hidden from other peers. Confidence: 0.85
+- Prefers CSS to avoid relying solely on newer selectors like `:has()` without a reliable fallback selector. Confidence: 0.85

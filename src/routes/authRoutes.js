@@ -1,5 +1,6 @@
 const express = require('express');
 const { supabase } = require('../config/supabaseClient');
+const { requireAuth } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
@@ -136,6 +137,34 @@ router.post('/reset-password', async (req, res) => {
     );
 
     if (updateError) throw updateError;
+    res.json({ success: true, message: "Password updated successfully" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/change-password', requireAuth, async (req, res) => {
+  try {
+    const { current_password, new_password } = req.body;
+    if (!current_password || !new_password) {
+      return res.status(400).json({ error: "Current and new password are required" });
+    }
+
+    const { error: verifyError } = await supabase.auth.signInWithPassword({
+      email: req.user.email,
+      password: current_password,
+    });
+    if (verifyError) {
+      return res.status(401).json({ error: "Current password is incorrect" });
+    }
+
+    const { supabaseAdmin } = require('../config/supabaseAdminClient');
+    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+      req.user.id,
+      { password: new_password }
+    );
+    if (updateError) throw updateError;
+
     res.json({ success: true, message: "Password updated successfully" });
   } catch (error) {
     res.status(500).json({ error: error.message });

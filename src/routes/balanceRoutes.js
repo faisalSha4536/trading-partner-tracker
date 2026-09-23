@@ -3,7 +3,7 @@ const { supabase } = require('../config/supabaseClient');
 const { calculateBalances } = require('../services/balanceService');
 const { requireAuth, requireAdmin } = require('../middleware/authMiddleware');
 const { getPartnerByUserId } = require('../models/partnerModel');
-const { getPnlEntries, deleteLedgerEntry } = require('../models/ledgerModel');
+const { getPnlEntries, getDepositWithdrawalEntries, deleteLedgerEntry } = require('../models/ledgerModel');
 const { getSpotFills } = require('../services/bitgetService');
 
 const router = express.Router();
@@ -39,6 +39,15 @@ router.get('/pnl-history', requireAuth, async (req, res) => {
       ownerId = myPartnerRow.owner_id;
     }
     const entries = await getPnlEntries(ownerId);
+    res.json(entries);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/transaction-log', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const entries = await getDepositWithdrawalEntries(req.user.id);
     res.json(entries);
   } catch (error) {
     res.status(500).json({ error: error.message });

@@ -4,6 +4,7 @@
 - Prefers Express middleware for authentication (`requireAuth`) and authorization (`requireAdmin`). Confidence: 0.95
 - Wants JWT token verification via `Authorization: Bearer <token>` header. Confidence: 0.9
 - Prefers route-level protection by applying middleware to specific endpoints rather than global auth. Confidence: 0.9
+- Expects resource mutation endpoints to verify the requesting user owns the resource via a fetched ownership check (e.g., owner_id), not only role-based middleware. Confidence: 0.85
 - Prefers storing sensitive credentials in environment variables. Confidence: 0.95
 - Wants `.env.example` updated when new environment variables are introduced. Confidence: 0.85
 - Prefers backend-only changes when explicitly instructed not to touch the frontend. Confidence: 0.95
@@ -22,3 +23,6 @@
 - When debugging backend auth flows, wants both the returned `data` and `error` from Supabase operations logged separately and explicitly, not just a generic catch-block message. Confidence: 0.9
 - Wants backend auth errors surfaced in the API response rather than swallowed, so signup/insert failures are visible. Confidence: 0.9
 - Prefers defensive fallback values for required database fields during auth signup (e.g., name → email local-part → default label) to avoid NOT NULL constraint failures. Confidence: 0.85
+- Prefers self-service endpoints under `/me` for operations on the currently authenticated user's own partner record. Confidence: 0.85
+- Wants self-service profile management (edit name, change password) accessible from the Settings tab for all authenticated users. Confidence: 0.85
+- Wants sensitive auth operations (e.g., password changes) to require verification of current credentials for security. Confidence: 0.9

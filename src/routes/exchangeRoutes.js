@@ -19,17 +19,38 @@ router.post('/bitget/connect', requireAuth, requireAdmin, async (req, res) => {
     const encryptedSecret = encrypt(secret_key);
     const encryptedPassphrase = encrypt(passphrase);
 
-    const { data, error } = await supabase
-      .from('exchange_credentials')
-      .upsert({
-        owner_id: req.user.id,
-        exchange: 'bitget',
-        api_key: encryptedKey,
-        secret_key: encryptedSecret,
-        passphrase: encryptedPassphrase,
-      }, { onConflict: 'owner_id,exchange' })
-      .select()
-      .single();
+    const upsertPayload = {
+      owner_id: req.user.id,
+      exchange: 'bitget',
+      api_key: encryptedKey,
+      secret_key: encryptedSecret,
+      passphrase: encryptedPassphrase,
+      is_valid: true,
+    };
+
+    let data, error;
+    try {
+      const res1 = await supabase
+        .from('exchange_credentials')
+        .upsert(upsertPayload, { onConflict: 'owner_id,exchange' })
+        .select()
+        .single();
+      data = res1.data;
+      error = res1.error;
+    } catch (e) {
+      error = e;
+    }
+
+    if (error && error.message && error.message.includes('is_valid')) {
+      delete upsertPayload.is_valid;
+      const res2 = await supabase
+        .from('exchange_credentials')
+        .upsert(upsertPayload, { onConflict: 'owner_id,exchange' })
+        .select()
+        .single();
+      data = res2.data;
+      error = res2.error;
+    }
 
     if (error) throw error;
     res.json({ success: true, connected: true });
@@ -40,15 +61,52 @@ router.post('/bitget/connect', requireAuth, requireAdmin, async (req, res) => {
 
 router.get('/bitget/status', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('exchange_credentials')
-      .select('id, created_at')
-      .eq('owner_id', req.user.id)
-      .eq('exchange', 'bitget')
-      .maybeSingle();
+    let data, error;
+    try {
+      const res1 = await supabase
+        .from('exchange_credentials')
+        .select('id, created_at, is_valid')
+        .eq('owner_id', req.user.id)
+        .eq('exchange', 'bitget')
+        .maybeSingle();
+      data = res1.data;
+      error = res1.error;
+    } catch (e) {
+      error = e;
+    }
+
+    if (error && error.message && error.message.includes('is_valid')) {
+      const res2 = await supabase
+        .from('exchange_credentials')
+        .select('id, created_at')
+        .eq('owner_id', req.user.id)
+        .eq('exchange', 'bitget')
+        .maybeSingle();
+      data = res2.data;
+      error = res2.error;
+    }
 
     if (error) throw error;
-    res.json({ connected: !!data, connectedAt: data ? data.created_at : null });
+    console.log('Bitget status response:', { connected: !!data, is_valid: data ? data.is_valid : null });
+    res.json({
+      connected: !!data,
+      is_valid: data ? (data.is_valid !== undefined ? data.is_valid : true) : null,
+      connectedAt: data ? data.created_at : null
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.delete('/bitget/disconnect', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('exchange_credentials')
+      .delete()
+      .eq('owner_id', req.user.id)
+      .eq('exchange', 'bitget');
+    if (error) throw error;
+    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -87,6 +145,16 @@ router.post('/bitget/test', requireAuth, requireAdmin, async (req, res) => {
         'Content-Type': 'application/json',
       },
     });
+
+    try {
+      await supabase
+        .from('exchange_credentials')
+        .update({ is_valid: true })
+        .eq('owner_id', req.user.id)
+        .eq('exchange', 'bitget');
+    } catch (updateErr) {
+      // ignore if column doesn't exist yet
+    }
 
     res.json({ success: true, message: "Connection successful", data: response.data });
   } catch (error) {

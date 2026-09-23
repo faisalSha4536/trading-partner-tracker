@@ -13,6 +13,11 @@ async function calculateBalances(asOfDate, owner_id, requestingUserRole, request
   const names = Object.fromEntries(partners.map((partner) => [String(partner.id), partner.name]));
   const userIds = Object.fromEntries(partners.map((partner) => [String(partner.id), partner.user_id]));
   const isVisibleMap = Object.fromEntries(partners.map((partner) => [String(partner.id), Boolean(partner.is_visible_to_others)]));
+  const marginPercentages = Object.fromEntries(partners.map((partner) => [String(partner.id), Number(partner.margin_percentage ?? 0)]));
+  const adminPartner = partners.find((partner) => String(partner.user_id) === String(owner_id));
+  const adminPartnerId = adminPartner ? String(adminPartner.id) : null;
+
+  const netProfitByPartner = Object.fromEntries(partnerIds.map((id) => [id, 0]));
 
   for (const entry of ledgerEntries) {
     const entryType = String(entry.entry_type ?? '').toLowerCase();
@@ -44,7 +49,9 @@ async function calculateBalances(asOfDate, owner_id, requestingUserRole, request
 
       for (const id of partnerIds) {
         const ratio = balances[id] / totalBalance;
-        balances[id] += amount * ratio;
+        const share = amount * ratio;
+        netProfitByPartner[id] += share;
+        balances[id] += share;
       }
     }
   }
@@ -54,6 +61,11 @@ async function calculateBalances(asOfDate, owner_id, requestingUserRole, request
   const result = partnerIds.map((id) => {
     const currentBalance = balances[id];
     const ratio = totalBalance === 0 ? 0 : Number((currentBalance / totalBalance).toFixed(4));
+    const isOwnAdmin = id === adminPartnerId || String(userIds[id]) === String(owner_id);
+    const marginPct = marginPercentages[id] || 0;
+    const netTradingProfit = netProfitByPartner[id] || 0;
+    const marginBase = Math.max(netTradingProfit, 0);
+    const marginAmount = isOwnAdmin ? null : marginBase * (marginPct / 100);
 
     return {
       partner_id: id,
@@ -62,6 +74,8 @@ async function calculateBalances(asOfDate, owner_id, requestingUserRole, request
       total_deposited: totalDeposited[id],
       current_balance: currentBalance,
       ratio,
+      margin_percentage: marginPct,
+      margin_amount: isOwnAdmin ? null : marginAmount,
     };
   });
 

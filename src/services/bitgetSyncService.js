@@ -44,16 +44,51 @@ async function syncBitgetPnl(ownerId, customStartTime) {
 
   const signature = generateBitgetSignature(timestamp, 'GET', requestPath, queryString, secretKey);
 
-  const fillsResponse = await axios.get(baseUrl + requestPath + queryString, {
-    headers: {
-      'ACCESS-KEY': apiKey,
-      'ACCESS-SIGN': signature,
-      'ACCESS-PASSPHRASE': passphrase,
-      'ACCESS-TIMESTAMP': timestamp,
-      'locale': 'en-US',
-      'Content-Type': 'application/json',
-    },
-  });
+  let fillsResponse;
+  try {
+    fillsResponse = await axios.get(baseUrl + requestPath + queryString, {
+      headers: {
+        'ACCESS-KEY': apiKey,
+        'ACCESS-SIGN': signature,
+        'ACCESS-PASSPHRASE': passphrase,
+        'ACCESS-TIMESTAMP': timestamp,
+        'locale': 'en-US',
+        'Content-Type': 'application/json',
+      },
+    });
+  } catch (err) {
+    console.log('Bitget sync error details:', JSON.stringify(err.response?.data));
+    const errorBody = err.response?.data;
+    const status = err.response?.status;
+    const code = errorBody?.code || errorBody?.errorCode || '';
+    const msg = errorBody?.msg || errorBody?.message || errorBody?.errorMsg || err.message || '';
+    const combinedErrorText = `${code} ${msg} ${status || ''}`;
+    const isAuthError = status === 401 || status === 403 || /40009|Invalid ACCESS-SIGN|Invalid API|ACCESS-SIGN|API[-\s]?key|signature|unauthorized|401|403|invalid|revoked|expired/i.test(combinedErrorText);
+
+    if (isAuthError) {
+      try {
+        console.log('Marking connection invalid for owner:', ownerId);
+        const updateRes = await supabase
+          .from('exchange_credentials')
+          .update({ is_valid: false })
+          .eq('owner_id', ownerId)
+          .eq('exchange', 'bitget');
+        console.log('Update result:', updateRes.error);
+      } catch (updateErr) {
+        console.error('Failed to update is_valid column:', updateErr.message);
+      }
+    }
+
+    if (errorBody) {
+      if (code || msg) {
+        throw new Error(`Bitget sync error${code ? ` [${code}]` : ''}: ${msg || 'Unknown error'}`);
+      }
+    }
+    if (status === 401 || status === 403) {
+      throw new Error('Bitget authentication failed — API key may be invalid or revoked');
+    }
+    throw err;
+  }
 
   const fills = fillsResponse.data.data || [];
 

@@ -23,6 +23,17 @@ router.post('/subscribe', requireAuth, async (req, res) => {
   }
 });
 
+router.delete('/unsubscribe', requireAuth, async (req, res) => {
+  try {
+    const { endpoint } = req.body;
+    const { error } = await supabase.from('push_subscriptions').delete().eq('user_id', req.user.id).eq('endpoint', endpoint);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.get('/vapid-public-key', (req, res) => {
   res.json({ publicKey: process.env.VAPID_PUBLIC_KEY });
 });

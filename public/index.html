@@ -6,6 +6,7 @@
   <title>Trading Partners</title>
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/png" href="/icons/icon-192.png">
   <meta name="theme-color" content="#000000">
 </head>
 <body>
@@ -17,7 +18,11 @@
     </button>
     <button class="sidebar-item" data-target="tab-ledger">
       <span class="nav-glyph">≡</span>
-      <span class="sidebar-label">Ledger</span>
+      <span class="sidebar-label">P&L</span>
+    </button>
+    <button class="sidebar-item admin-only" data-target="tab-transactions">
+      <span class="nav-glyph">⇄</span>
+      <span class="sidebar-label">Transactions</span>
     </button>
     <button class="sidebar-item" data-target="tab-settings">
       <span class="nav-glyph">⚙</span>
@@ -27,14 +32,18 @@
 
   <div class="page-wrapper">
     <div class="page-header">
-      <h1>Trading Partners</h1>
+      <h1><img src="/icons/icon-192.png" alt="Trading Partners" class="app-logo">Trading Partners</h1>
     </div>
 
     <div id="message-area"></div>
 
     <div id="tab-overview" data-tab="overview">
       <section class="section">
-        <div class="section-title">Balances</div>
+        <div class="section-title">Partners & Balances</div>
+        <div class="admin-only" style="margin-bottom: 1rem; display: flex; gap: 0.5rem; align-items: center;">
+          <button id="open-add-partner-btn" class="btn-secondary">+ Add Partner</button>
+          <button id="open-add-balance-btn" class="btn-secondary">Manage Balance</button>
+        </div>
         <div class="table-scroll">
           <table id="balance-table">
             <thead>
@@ -53,30 +62,10 @@
     </div>
 
     <div id="tab-ledger" data-tab="ledger" style="display:none">
-      <section class="section admin-only">
-        <div class="section-title">Log Daily P&L</div>
-        <form id="pnl-form">
-          <label for="pnl-type">Type</label>
-          <select id="pnl-type" required>
-            <option value="profit">Profit</option>
-            <option value="loss">Loss</option>
-          </select>
-
-          <label for="pnl-amount">Amount</label>
-          <input type="number" id="pnl-amount" step="0.01" min="0" required>
-
-          <label for="pnl-date">Date</label>
-          <input type="date" id="pnl-date" required>
-
-          <div id="pnl-form-error" class="inline-error"></div>
-
-          <button type="submit" id="pnl-submit">Submit P&L</button>
-        </form>
-      </section>
-
       <section class="section">
         <div class="section-title">P&L History</div>
         <div class="admin-only" style="margin-bottom: 1rem; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+          <button id="open-add-pnl-btn" class="btn-secondary">Add P&L Manually</button>
           <button id="sync-bitget-btn" class="btn-secondary" style="display: none; width: auto;">Sync Bitget Trades</button>
           <input type="date" id="bitget-sync-from-date" style="display: none; margin-bottom: 0; width: auto;">
           <button id="delete-selected-btn" class="btn-danger" style="display: none; width: auto;">Delete Selected</button>
@@ -111,16 +100,80 @@
       </section>
     </div>
 
+    <div id="tab-transactions" data-tab="transactions" style="display:none">
+      <section class="section">
+        <div class="section-title">Transaction Log</div>
+        <div class="table-scroll">
+          <table id="transaction-log-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Partner</th>
+                <th>Type</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
     <div id="tab-settings" data-tab="settings" style="display:none">
+      <div class="section">
+        <div class="section-title">Edit Name</div>
+        <label for="edit-name-input">Name</label>
+        <input type="text" id="edit-name-input">
+        <button id="save-name-btn" class="btn-secondary">Save Name</button>
+        <div id="edit-name-message" style="margin-top:8px; font-size:13px;"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Change Password</div>
+        <label for="current-password-input">Current Password</label>
+        <input type="password" id="current-password-input">
+        <label for="new-password-input">New Password</label>
+        <input type="password" id="new-password-input">
+        <button id="change-password-btn" class="btn-secondary">Change Password</button>
+        <div id="change-password-message" style="margin-top:8px; font-size:13px;"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Privacy & Notifications</div>
+
+        <div id="privacy-checkbox-row" style="display:none;">
+          <label><input type="checkbox" id="visibility-checkbox"> Show my details to other partners</label>
+        </div>
+
+        <div>
+          <label><input type="checkbox" id="notifications-checkbox"> Enable push notifications</label>
+        </div>
+
+        <div id="privacy-notif-message" style="margin-top:8px; font-size:13px;"></div>
+      </div>
+
       <div class="section admin-only">
-        <div class="section-title">Bitget Integration</div>
-        <button id="connect-bitget-btn" class="btn-secondary" style="width: auto;">Connect Bitget Account</button>
+        <div class="section-title">Exchange Integration</div>
+        <div class="exchange-row">
+          <img src="https://www.bitget.com/favicon.ico" alt="Bitget" class="exchange-logo">
+          <div class="exchange-info">
+            <div class="exchange-name">Bitget</div>
+            <div class="exchange-status" id="bitget-status-text">Not Connected</div>
+          </div>
+          <button id="connect-bitget-btn" class="btn-secondary">Connect</button>
+        </div>
       </div>
 
       <div id="bitget-modal" class="modal-overlay admin-only" style="display: none;">
         <div class="modal-content">
-          <button id="bitget-close-btn" class="modal-close-btn">X</button>
-          <h2>Connect Your Bitget Account</h2>
+          <div class="modal-header-row">
+            <img src="https://www.bitget.com/favicon.ico" alt="Bitget" class="exchange-logo">
+            <div>
+              <h2 style="margin:0;">Connect Bitget</h2>
+              <p style="margin:4px 0 0 0; font-size:13px; color:var(--text-muted);">Enter your read-only API credentials to sync trades automatically.</p>
+            </div>
+          </div>
+
           <label for="bitget-api-key">API Key</label>
           <input type="text" id="bitget-api-key">
 
@@ -133,23 +186,42 @@
           <div id="bitget-modal-message"></div>
 
           <button type="button" id="bitget-save-btn" class="btn-secondary">Test & Save</button>
+
+          <button id="bitget-close-btn" class="btn-secondary" style="margin-top:12px; width:100%;">Cancel</button>
         </div>
       </div>
 
-      <section class="section partner-only">
-        <div class="section-title">Privacy Settings</div>
-        <form id="privacy-form">
-          <label>
-            <input type="checkbox" id="privacy-visible">
-            Show my details to other partners
-          </label>
-          <div id="privacy-form-error" class="inline-error"></div>
-          <button type="submit" id="privacy-submit">Save</button>
-        </form>
+      <section class="section">
+        <div class="section-title">Account Action</div>
+        <button id="logout-button" class="btn-secondary">Logout</button>
       </section>
+    </div>
+  </div>
 
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-target="tab-overview">
+      <span class="nav-glyph">◆</span>
+      <span class="nav-label">Overview</span>
+    </button>
+    <button class="nav-item" data-target="tab-ledger">
+      <span class="nav-glyph">≡</span>
+      <span class="nav-label">P&L</span>
+    </button>
+    <button class="nav-item admin-only" data-target="tab-transactions">
+      <span class="nav-glyph">⇄</span>
+      <span class="nav-label">Transactions</span>
+    </button>
+    <button class="nav-item" data-target="tab-settings">
+      <span class="nav-glyph">⚙</span>
+      <span class="nav-label">Settings</span>
+    </button>
+  </nav>
+
+  <div class="modal-overlay" id="add-partner-modal">
+    <div class="modal-content">
       <section class="section admin-only">
         <div class="section-title">Add Partner</div>
+        <div id="add-partner-error" class="inline-error"></div>
         <form id="partner-form">
           <label for="partner-name">Name</label>
           <input type="text" id="partner-name" required>
@@ -166,12 +238,19 @@
           <label for="partner-deposit-date">Date</label>
           <input type="date" id="partner-deposit-date">
 
+          <label for="new-partner-margin">Margin % (admin's cut of this partner's profit)</label>
+          <input type="number" id="new-partner-margin" min="0" max="100" step="0.1" value="0">
+
           <div id="partner-form-error" class="inline-error"></div>
 
           <button type="submit" id="partner-submit">Add Partner</button>
         </form>
       </section>
+    </div>
+  </div>
 
+  <div class="modal-overlay" id="add-balance-modal">
+    <div class="modal-content">
       <section class="section admin-only">
         <div class="section-title">Log Deposit/Withdrawal</div>
         <form id="transaction-form">
@@ -195,28 +274,33 @@
           <button type="submit" id="transaction-submit">Submit</button>
         </form>
       </section>
-
-      <section class="section">
-        <div class="section-title">Account Action</div>
-        <button id="logout-button" class="btn-secondary">Logout</button>
-      </section>
     </div>
   </div>
 
-  <nav class="bottom-nav">
-    <button class="nav-item active" data-target="tab-overview">
-      <span class="nav-glyph">◆</span>
-      <span class="nav-label">Overview</span>
-    </button>
-    <button class="nav-item" data-target="tab-ledger">
-      <span class="nav-glyph">≡</span>
-      <span class="nav-label">Ledger</span>
-    </button>
-    <button class="nav-item" data-target="tab-settings">
-      <span class="nav-glyph">⚙</span>
-      <span class="nav-label">Settings</span>
-    </button>
-  </nav>
+  <div class="modal-overlay" id="add-pnl-modal">
+    <div class="modal-content">
+      <section class="section admin-only">
+        <div class="section-title">Log Daily P&L</div>
+        <form id="pnl-form">
+          <label for="pnl-type">Type</label>
+          <select id="pnl-type" required>
+            <option value="profit">Profit</option>
+            <option value="loss">Loss</option>
+          </select>
+
+          <label for="pnl-amount">Amount</label>
+          <input type="number" id="pnl-amount" step="0.01" min="0" required>
+
+          <label for="pnl-date">Date</label>
+          <input type="date" id="pnl-date" required>
+
+          <div id="pnl-form-error" class="inline-error"></div>
+
+          <button type="submit" id="pnl-submit">Submit P&L</button>
+        </form>
+      </section>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>

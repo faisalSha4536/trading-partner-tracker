@@ -355,7 +355,7 @@ select option {
   }
 
   .sidebar:hover {
-    width: 180px;
+    width: 220px;
   }
 
   .sidebar-highlight {
@@ -425,4 +425,209 @@ select option {
 
 @media (max-width: 768px) {
   .sidebar { display: none; }
+}
+
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-overlay.open {
+  display: flex;
+}
+
+.modal-content {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  max-width: 420px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.modal-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+@media (max-width: 600px) {
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal-content {
+    max-width: 100%;
+    border-radius: 16px 16px 0 0;
+    border-bottom: none;
+    max-height: 80vh;
+    animation: slide-up 0.25s ease;
+  }
+
+  @keyframes slide-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 24px;
+  font-style: normal;
+}
+
+.exchange-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.exchange-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+}
+
+.exchange-info {
+  flex: 1;
+}
+
+.exchange-name {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.exchange-status {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.exchange-status.connected {
+  color: var(--profit);
+}
+
+#save-name-btn,
+#change-password-btn {
+  margin-top: 16px;
+}
+
+input[type="checkbox"] {
+  width: auto;
+  flex-shrink: 0;
+}
+
+.section label:has(input[type="checkbox"]) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.app-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  vertical-align: middle;
+  margin-right: 10px;
+}
+
+.modal-header-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+@media (max-width: 768px) {
+  .table-scroll table,
+  .table-scroll thead,
+  .table-scroll tbody,
+  .table-scroll th,
+  .table-scroll td,
+  .table-scroll tr {
+    display: block;
+  }
+
+  .table-scroll thead {
+    display: none;
+  }
+
+  .table-scroll tr {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 10px;
+    padding: 12px 14px;
+    position: relative;
+  }
+
+  .table-scroll td {
+    border: none;
+    padding: 0;
+    display: block;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease, padding 0.25s ease;
+  }
+
+  .table-scroll td.card-summary {
+    max-height: 100px;
+    padding: 4px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 15px;
+    cursor: pointer;
+  }
+
+  .table-scroll tr.expanded td {
+    max-height: 200px;
+    padding: 4px 0;
+  }
+
+  .table-scroll tr.expanded td.card-summary {
+    display: flex;
+  }
+
+  .table-scroll td[data-label]::before {
+    content: attr(data-label);
+    color: var(--text-muted);
+    font-size: 12px;
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .table-scroll tr.expanded td:not(.card-summary) {
+    margin-top: 8px;
+  }
+
+  .table-scroll td[data-label]:not(.card-summary)::before {
+    margin-bottom: 6px;
+  }
+
+  .card-expand-icon {
+    color: var(--text-muted);
+    font-size: 12px;
+  }
 }
