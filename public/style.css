@@ -146,13 +146,13 @@ button[type="submit"]:hover, .btn-primary:hover {
   justify-content: space-between;
   align-items: center;
   max-width: 900px;
-  margin: 0 auto 24px auto;
-  padding: 20px 20px 0 20px;
+  margin: 0;
+  padding: 20px 0 0 0;
 }
 
 .page-wrapper {
   max-width: 900px;
-  margin: 0 auto;
+  margin: 0;
   padding: 0 20px 80px 20px;
 }
 
@@ -418,7 +418,7 @@ select option {
     width: auto;
   }
 
-  .page-wrapper, .page-header {
+  .page-wrapper {
     margin-left: 64px;
   }
 }
@@ -543,11 +543,11 @@ input[type="checkbox"] {
 }
 
 .app-logo {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+  width: 40px;
+  height: 40px;
+  border-radius: 2px;
   vertical-align: middle;
-  margin-right: 10px;
+  margin-right: 14px;
 }
 
 .modal-header-row {
@@ -610,24 +610,33 @@ input[type="checkbox"] {
     display: flex;
   }
 
-  .table-scroll td[data-label]::before {
+  .table-scroll td[data-label]:not(.card-summary)::before {
     content: attr(data-label);
     color: var(--text-muted);
     font-size: 12px;
     display: block;
-    margin-bottom: 2px;
+    margin-bottom: 6px;
   }
 
   .table-scroll tr.expanded td:not(.card-summary) {
     margin-top: 8px;
   }
+}
 
-  .table-scroll td[data-label]:not(.card-summary)::before {
-    margin-bottom: 6px;
-  }
+.margin-cell-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 
-  .card-expand-icon {
-    color: var(--text-muted);
-    font-size: 12px;
+.mobile-card-extra {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-card-extra {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
   }
 }

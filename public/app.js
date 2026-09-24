@@ -107,8 +107,8 @@ function renderBalances(balances) {
       : '<td data-label="Actions"></td>';
     const marginCell = isAdmin
       ? (isOwnRow
-          ? `<td data-label="Margin %">${marginValue.toFixed(1)}%</td>`
-          : `<td data-label="Margin %">${marginValue.toFixed(1)}% <button type="button" class="edit-margin-btn link-button" data-partner-id="${partner_id}" data-margin="${marginValue}">Edit</button></td>`)
+          ? `<td data-label="Margin %"><span class="margin-cell-content">${marginValue.toFixed(1)}%</span></td>`
+          : `<td data-label="Margin %"><span class="margin-cell-content">${marginValue.toFixed(1)}% <button type="button" class="edit-margin-btn link-button" data-partner-id="${partner_id}" data-margin="${marginValue}">Edit</button></span></td>`)
       : '';
     const marginOwedCell = isAdmin
       ? (isOwnRow || !margin_amount || marginAmountValue === 0
@@ -118,13 +118,13 @@ function renderBalances(balances) {
 
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td class="card-summary" data-label="Name">
-        <span>${name ?? 'Unknown'}</span>
-        <span style="display:flex; align-items:center; gap:10px;">
-          <span>$${balanceValue.toFixed(2)}</span>
-          <span class="card-expand-icon">▾</span>
-        </span>
-      </td>
+     <td class="card-summary" data-label="Name">
+       <span>${name ?? 'Unknown'}</span>
+       <span class="mobile-card-extra">
+         <span>$${balanceValue.toFixed(2)}</span>
+         <span class="card-expand-icon">▾</span>
+       </span>
+     </td>
       <td data-label="Deposited">${depositedValue.toFixed(2)}</td>
       <td data-label="Current Balance">${balanceValue.toFixed(2)}</td>
       <td data-label="Ratio">${(ratioValue * 100).toFixed(2)}%</td>
@@ -265,13 +265,13 @@ function renderTransactionLog(entries) {
 
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td class="card-summary" data-label="Date">
-        <span>${dateStr}</span>
-        <span style="display:flex; align-items:center; gap:10px;">
-          <span>$${amountValue.toFixed(2)}</span>
-          <span class="card-expand-icon">▾</span>
-        </span>
-      </td>
+     <td class="card-summary" data-label="Date">
+       <span>${dateStr}</span>
+       <span class="mobile-card-extra">
+         <span>$${amountValue.toFixed(2)}</span>
+         <span class="card-expand-icon">▾</span>
+       </span>
+     </td>
       <td data-label="Partner">${partnerName}</td>
       <td data-label="Type">${typeStr}</td>
       <td data-label="Amount">${amountValue.toFixed(2)}</td>
@@ -365,17 +365,17 @@ function renderPnlHistory(entries) {
     if (isConflict) {
       row.className = 'duplicate-date-warning';
     }
-    row.innerHTML = `
-      <td class="card-summary" data-label="Date">
-        <div style="display:flex; align-items:center;">
-          ${selectCheckboxHtml}
-          <span>${date}</span>
-        </div>
-        <div style="display:flex; align-items:center; gap:10px;">
-          <span class="${typeClass}">$${absAmount}</span>
-          <span class="card-expand-icon">▾</span>
-        </div>
-      </td>
+     row.innerHTML = `
+       <td class="card-summary" data-label="Date">
+         <div style="display:flex; align-items:center;">
+           ${selectCheckboxHtml}
+           <span>${date}</span>
+         </div>
+         <span class="mobile-card-extra">
+           <span class="${typeClass}">$${absAmount}</span>
+           <span class="card-expand-icon">▾</span>
+         </span>
+       </td>
       <td data-label="Amount">${absAmount}</td>
       <td data-label="Type"><span class="${typeClass}">${typeText}</span></td>
       <td data-label="Logged By">${sourceText}${warningIndicator}</td>
