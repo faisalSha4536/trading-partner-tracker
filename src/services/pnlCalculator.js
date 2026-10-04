@@ -1,8 +1,7 @@
 function calculateRealizedPnlByDay(fills) {
-  // fills: array of Bitget fill objects, each with { symbol, side, priceAvg, size, cTime, feeDetail }
-  // Returns: an object like { "2026-09-15": 12.50, "2026-09-16": -4.30 }
+  const TIMEZONE_OFFSET_MS = 5 * 60 * 60 * 1000; // Pakistan Standard Time, UTC+5, no DST
 
-  const lotsBySymbol = {}; // { symbol: [ { price, remainingSize } ] }
+  const lotsBySymbol = {};
   const pnlByDay = {};
 
   const sorted = [...fills].sort((a, b) => Number(a.cTime) - Number(b.cTime));
@@ -12,7 +11,8 @@ function calculateRealizedPnlByDay(fills) {
     const price = parseFloat(fill.priceAvg);
     let size = parseFloat(fill.size);
     const fee = fill.feeDetail && fill.feeDetail.totalFee ? Math.abs(parseFloat(fill.feeDetail.totalFee)) : 0;
-    const dateKey = new Date(Number(fill.cTime)).toISOString().split('T')[0];
+    const localTime = new Date(Number(fill.cTime) + TIMEZONE_OFFSET_MS);
+    const dateKey = localTime.toISOString().split('T')[0];
 
     if (!lotsBySymbol[symbol]) lotsBySymbol[symbol] = [];
 
