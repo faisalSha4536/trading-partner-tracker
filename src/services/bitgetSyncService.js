@@ -27,30 +27,43 @@ async function syncBitgetPnl(ownerId, customStartTime) {
   const endTime = Date.now();
 
   const baseUrl = process.env.BITGET_API_URL || 'https://api.bitget.com';
-  const timeRes = await axios.get(baseUrl + '/api/v2/public/time');
-  const timestamp = timeRes.data.data.serverTime;
-
   const requestPath = '/api/v2/spot/trade/fills';
-  const queryParams = new URLSearchParams();
-  queryParams.append('startTime', startTime.toString());
-  queryParams.append('endTime', endTime.toString());
-  queryParams.append('limit', '100');
-  const queryString = '?' + queryParams.toString();
 
-  const signature = generateBitgetSignature(timestamp, 'GET', requestPath, queryString, secretKey);
+  const fetchFillsPage = async (idLessThan) => {
+    const queryParams = new URLSearchParams();
+    queryParams.append('startTime', startTime.toString());
+    queryParams.append('endTime', endTime.toString());
+    queryParams.append('limit', '100');
+    if (idLessThan) queryParams.append('idLessThan', idLessThan);
+    const queryString = '?' + queryParams.toString();
 
-  const fillsResponse = await axios.get(baseUrl + requestPath + queryString, {
-    headers: {
-      'ACCESS-KEY': apiKey,
-      'ACCESS-SIGN': signature,
-      'ACCESS-PASSPHRASE': passphrase,
-      'ACCESS-TIMESTAMP': timestamp,
-      'locale': 'en-US',
-      'Content-Type': 'application/json',
-    },
-  });
+    const pageTimestamp = (await axios.get(baseUrl + '/api/v2/public/time')).data.data.serverTime;
+    const signature = generateBitgetSignature(pageTimestamp, 'GET', requestPath, queryString, secretKey);
 
-  const fills = fillsResponse.data.data || [];
+    const fillsResponse = await axios.get(baseUrl + requestPath + queryString, {
+      headers: {
+        'ACCESS-KEY': apiKey,
+        'ACCESS-SIGN': signature,
+        'ACCESS-PASSPHRASE': passphrase,
+        'ACCESS-TIMESTAMP': pageTimestamp,
+        'locale': 'en-US',
+        'Content-Type': 'application/json',
+      },
+    });
+
+    return fillsResponse.data.data || [];
+  };
+
+  const fills = [];
+  let idLessThan;
+  while (true) {
+    const page = await fetchFillsPage(idLessThan);
+    fills.push(...page);
+    if (page.length < 100) break;
+    idLessThan = page[page.length - 1].tradeId;
+  }
+
+  console.log(`Bitget sync: total fills fetched: ${fills.length}`);
 
   if (fills.length === 0) {
     return { synced: true, entriesCreated: 0 };
